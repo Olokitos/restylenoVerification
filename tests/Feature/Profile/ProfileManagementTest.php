@@ -59,8 +59,6 @@ describe('Profile Management - Edit Profile', function () {
     
     // Case-016: User uploads invalid file type
     it('fails when user uploads invalid file type for profile picture', function () {
-        $this->markTestSkipped('Profile picture upload validation not yet implemented');
-        
         Storage::fake('public');
         $user = User::factory()->create();
         
@@ -96,8 +94,6 @@ describe('Profile Management - Delete Account', function () {
     
     // Case-018: User attempts to delete without confirmation
     it('prevents account deletion without confirmation', function () {
-        $this->markTestSkipped('Confirmation checkbox validation not yet implemented');
-        
         $user = User::factory()->create([
             'password' => bcrypt('password123')
         ]);

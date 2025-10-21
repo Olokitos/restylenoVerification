@@ -1,6 +1,6 @@
 import AppLayoutTemplate from '@/layouts/app/app-header-layout';
 import { dashboard } from '@/routes';
-import { edit } from '@/routes/profile';
+import { edit } from '@/routes/settings/profile';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';

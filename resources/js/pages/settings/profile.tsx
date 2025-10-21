@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { edit } from '@/routes/profile';
+import { edit } from '@/routes/settings/profile';
 import { dashboard } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
