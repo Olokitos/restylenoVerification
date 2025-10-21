@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        
+        <script>
+            (function() {
+                const appearance = 'system';
+
+                if (appearance === 'system') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+                    if (prefersDark) {
+                        document.documentElement.classList.add('dark');
+                    }
+                }
+            })();
+        </script>
+
+        
+        <style>
+            html, body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+            }
+
+            html.dark, html.dark body {
+                background-color: #0f0f23 !important;
+                color: #ffffff !important;
+            }
+            
+            /* Ensure content is visible */
+            #app {
+                background-color: inherit !important;
+                color: inherit !important;
+                min-height: 100vh;
+            }
+        </style>
+
+        <title inertia>Laravel</title>
+
+        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+
+        <script type="module" >
+    import RefreshRuntime from 'http://[::1]:5173/@react-refresh'
+    RefreshRuntime.injectIntoGlobalHook(window)
+    window.$RefreshReg$ = () => {}
+    window.$RefreshSig$ = () => (type) => type
+    window.__vite_plugin_react_preamble_installed__ = true
+</script>        <script type="module" src="http://[::1]:5173/@vite/client"></script><script type="module" src="http://[::1]:5173/resources/js/app.tsx"></script><script type="module" src="http://[::1]:5173/resources/js/pages/dashboard.tsx"></script>                
+        <!-- Fallback CSS to ensure content is visible -->
+        <style>
+            /* Fallback styles in case main CSS doesn't load */
+            .fallback-content {
+                background: white;
+                color: black;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+            }
+            .fallback-content h1 {
+                color: #333;
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body class="font-sans antialiased">
+        <div id="app" data-page="{&quot;component&quot;:&quot;dashboard&quot;,&quot;props&quot;:{&quot;errors&quot;:{},&quot;name&quot;:&quot;Laravel&quot;,&quot;quote&quot;:{&quot;message&quot;:&quot;When there is no desire, all things are at peace.&quot;,&quot;author&quot;:&quot;Laozi&quot;},&quot;auth&quot;:{&quot;user&quot;:{&quot;id&quot;:2,&quot;name&quot;:&quot;Admin User&quot;,&quot;email&quot;:&quot;admin@restyle.com&quot;,&quot;email_verified_at&quot;:&quot;2025-10-10T10:38:10.000000Z&quot;,&quot;is_admin&quot;:true,&quot;two_factor_secret&quot;:null,&quot;two_factor_recovery_codes&quot;:null,&quot;two_factor_confirmed_at&quot;:null,&quot;created_at&quot;:&quot;2025-10-10T10:38:10.000000Z&quot;,&quot;updated_at&quot;:&quot;2025-10-10T10:38:10.000000Z&quot;}},&quot;sidebarOpen&quot;:true,&quot;stats&quot;:{&quot;wardrobeItems&quot;:0,&quot;outfitsCreated&quot;:0,&quot;itemsTraded&quot;:0,&quot;marketplaceStats&quot;:{&quot;totalProducts&quot;:10,&quot;totalCategories&quot;:8,&quot;featuredProducts&quot;:5,&quot;recentProducts&quot;:10}},&quot;debug&quot;:{&quot;user_id&quot;:2,&quot;user_name&quot;:&quot;Admin User&quot;,&quot;timestamp&quot;:&quot;2025-10-11T13:19:29.769496Z&quot;}},&quot;url&quot;:&quot;\/dashboard&quot;,&quot;version&quot;:&quot;533d524de0d24ca50501a643a5803e5b&quot;,&quot;clearHistory&quot;:false,&quot;encryptHistory&quot;:false}"></div>    </body>
+</html>

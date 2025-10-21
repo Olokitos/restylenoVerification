@@ -1,0 +1,525 @@
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
+import { send } from '@/routes/verification';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Transition } from '@headlessui/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { useRef, useState } from 'react';
+import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3 } from 'lucide-react';
+
+import DeleteUser from '@/components/delete-user';
+import HeadingSmall from '@/components/heading-small';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
+import { edit } from '@/routes/profile';
+import { dashboard } from '@/routes';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Manage Profile',
+        href: edit().url,
+    },
+];
+
+// Password complexity validation component
+function PasswordComplexity({ password }: { password: string }) {
+    const requirements = [
+        { text: 'At least 8 characters', met: password.length >= 8 },
+        { text: 'At least one uppercase letter', met: /[A-Z]/.test(password) },
+        { text: 'At least one lowercase letter', met: /[a-z]/.test(password) },
+        { text: 'At least one number', met: /\d/.test(password) },
+        { text: 'At least one special character (@$!%*?&)', met: /[@$!%*?&]/.test(password) },
+    ];
+
+    const allMet = requirements.every(req => req.met);
+
+    return (
+        <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-2 mb-3">
+                <Shield className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Password Requirements</p>
+            </div>
+            <div className="space-y-2">
+                {requirements.map((req, index) => (
+                    <div key={index} className="flex items-center space-x-3">
+                        {req.met ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className={`text-sm ${req.met ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                            {req.text}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            {allMet && (
+                <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                    <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Password meets all requirements!
+                        </span>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function Profile({
+    mustVerifyEmail,
+    status,
+}: {
+    mustVerifyEmail: boolean;
+    status?: string;
+}) {
+    const { auth } = usePage<SharedData>().props;
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const passwordInput = useRef<HTMLInputElement>(null);
+    const currentPasswordInput = useRef<HTMLInputElement>(null);
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Manage Profile" />
+
+            <SettingsLayout>
+                <div className="max-w-6xl mx-auto space-y-8">
+                    {/* Header with Back Button */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <Link 
+                                href={dashboard()}
+                                className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                <span>Back to Dashboard</span>
+                            </Link>
+                        </div>
+                        <div className="text-center">
+                            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                <User className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Welcome Section */}
+                    <div className="text-center space-y-4">
+                        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
+                        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                            Manage your personal information, secure your account, and customize your Restyle experience. 
+                            Keep your profile up-to-date for the best sustainable fashion journey.
+                        </p>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Card className="border-gray-200 dark:border-gray-700">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">Active</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">Account Status</div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-gray-200 dark:border-gray-700">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    {auth.user.email_verified_at ? 'Verified' : 'Pending'}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">Email Status</div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-gray-200 dark:border-gray-700">
+                            <CardContent className="p-4 text-center">
+                                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">Member</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">Since Today</div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Profile Information Card */}
+                    <Card className="border-gray-200 dark:border-gray-700 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                                    <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl text-gray-900 dark:text-white">Personal Information</CardTitle>
+                                    <CardDescription>Update your name and email address</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <Form
+                                {...ProfileController.update.form()}
+                                options={{
+                                    preserveScroll: true,
+                                }}
+                                className="space-y-6"
+                            >
+                                {({ processing, recentlySuccessful, errors }) => (
+                                    <>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Full Name
+                                                </Label>
+                                                <div className="relative">
+                                                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                    <Input
+                                                        id="name"
+                                                        className="pl-10 h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                                                        defaultValue={auth.user.name}
+                                                        name="name"
+                                                        required
+                                                        autoComplete="name"
+                                                        placeholder="Enter your full name"
+                                                        maxLength={100}
+                                                    />
+                                                </div>
+                                                <InputError message={errors.name} />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Email Address
+                                                </Label>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        className="pl-10 h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                                                        defaultValue={auth.user.email}
+                                                        name="email"
+                                                        required
+                                                        autoComplete="username"
+                                                        placeholder="Enter your email address"
+                                                        maxLength={100}
+                                                    />
+                                                </div>
+                                                <InputError message={errors.email} />
+                                            </div>
+                                        </div>
+
+                                        {mustVerifyEmail && auth.user.email_verified_at === null && (
+                                            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                                <div className="flex items-start space-x-3">
+                                                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                                                    <div className="flex-1">
+                                                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                            Your email address is unverified. Please check your email for a verification link.
+                                                        </p>
+                                                        <Link
+                                                            href={send()}
+                                                            as="button"
+                                                            className="mt-2 text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:text-yellow-600 dark:hover:text-yellow-200 underline"
+                                                        >
+                                                            Resend verification email
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                                {status === 'verification-link-sent' && (
+                                                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                                                        <div className="flex items-center space-x-2">
+                                                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                                Verification email sent! Check your inbox.
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center justify-between pt-4">
+                                            <Button
+                                                disabled={processing}
+                                                data-test="update-profile-button"
+                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-11"
+                                            >
+                                                <Save className="mr-2 h-4 w-4" />
+                                                {processing ? 'Saving...' : 'Save Changes'}
+                                            </Button>
+
+                                            <Transition
+                                                show={recentlySuccessful}
+                                                enter="transition ease-in-out"
+                                                enterFrom="opacity-0"
+                                                leave="transition ease-in-out"
+                                                leaveTo="opacity-0"
+                                            >
+                                                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    <span className="text-sm font-medium">Profile updated successfully!</span>
+                                                </div>
+                                            </Transition>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        </CardContent>
+                    </Card>
+
+                    {/* Password Update Card */}
+                    <Card className="border-gray-200 dark:border-gray-700 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                    <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl text-gray-900 dark:text-white">Security Settings</CardTitle>
+                                    <CardDescription>Update your password to keep your account secure</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <Form
+                                {...PasswordController.update.form()}
+                                options={{
+                                    preserveScroll: true,
+                                }}
+                                resetOnError={['password', 'password_confirmation', 'current_password']}
+                                resetOnSuccess
+                                onError={(errors) => {
+                                    if (errors.password) {
+                                        passwordInput.current?.focus();
+                                    }
+                                    if (errors.current_password) {
+                                        currentPasswordInput.current?.focus();
+                                    }
+                                }}
+                                className="space-y-6"
+                            >
+                                {({ errors, processing, recentlySuccessful }) => (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="current_password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Current Password
+                                            </Label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <Input
+                                                    id="current_password"
+                                                    ref={currentPasswordInput}
+                                                    name="current_password"
+                                                    type={showCurrentPassword ? "text" : "password"}
+                                                    className="pl-10 pr-10 h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                                                    autoComplete="current-password"
+                                                    placeholder="Enter your current password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                >
+                                                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </button>
+                                            </div>
+                                            <InputError message={errors.current_password} />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                New Password
+                                            </Label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <Input
+                                                    id="password"
+                                                    ref={passwordInput}
+                                                    name="password"
+                                                    type={showNewPassword ? "text" : "password"}
+                                                    className="pl-10 pr-10 h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                                                    autoComplete="new-password"
+                                                    placeholder="Enter your new password"
+                                                    maxLength={50}
+                                                    value={newPassword}
+                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                >
+                                                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </button>
+                                            </div>
+                                            <PasswordComplexity password={newPassword} />
+                                            <InputError message={errors.password} />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="password_confirmation" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Confirm New Password
+                                            </Label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <Input
+                                                    id="password_confirmation"
+                                                    name="password_confirmation"
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    className={`pl-10 pr-10 h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 ${
+                                                        confirmPassword && newPassword !== confirmPassword 
+                                                            ? 'border-red-300 dark:border-red-600' 
+                                                            : confirmPassword && newPassword === confirmPassword 
+                                                            ? 'border-green-300 dark:border-green-600' 
+                                                            : ''
+                                                    }`}
+                                                    autoComplete="new-password"
+                                                    placeholder="Confirm your new password"
+                                                    maxLength={50}
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                >
+                                                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </button>
+                                            </div>
+                                            {confirmPassword && newPassword !== confirmPassword && (
+                                                <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                                                    <AlertCircle className="h-4 w-4" />
+                                                    <span className="text-sm">Passwords do not match</span>
+                                                </div>
+                                            )}
+                                            {confirmPassword && newPassword === confirmPassword && (
+                                                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    <span className="text-sm">Passwords match</span>
+                                                </div>
+                                            )}
+                                            <InputError message={errors.password_confirmation} />
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-4">
+                                            <Button
+                                                disabled={processing}
+                                                data-test="update-password-button"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 h-11"
+                                            >
+                                                <Key className="mr-2 h-4 w-4" />
+                                                {processing ? 'Updating...' : 'Update Password'}
+                                            </Button>
+
+                                            <Transition
+                                                show={recentlySuccessful}
+                                                enter="transition ease-in-out"
+                                                enterFrom="opacity-0"
+                                                leave="transition ease-in-out"
+                                                leaveTo="opacity-0"
+                                            >
+                                                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    <span className="text-sm font-medium">Password updated successfully!</span>
+                                                </div>
+                                            </Transition>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        </CardContent>
+                    </Card>
+
+                    {/* Additional Settings Cards */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Account Status Card */}
+                        <Card className="border-gray-200 dark:border-gray-700">
+                            <CardHeader>
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                        <UserCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">Account Status</CardTitle>
+                                        <CardDescription>Your account information</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Email Verification</span>
+                                    <Badge variant={auth.user.email_verified_at ? "default" : "destructive"}>
+                                        {auth.user.email_verified_at ? "Verified" : "Pending"}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Account Type</span>
+                                    <Badge variant="secondary">Free</Badge>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Member Since</span>
+                                    <span className="text-sm text-gray-900 dark:text-white">Today</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Quick Actions Card */}
+                        <Card className="border-gray-200 dark:border-gray-700">
+                            <CardHeader>
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                                        <Settings className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">Quick Actions</CardTitle>
+                                        <CardDescription>Manage your account</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <Button variant="outline" className="w-full justify-start">
+                                    <Bell className="mr-2 h-4 w-4" />
+                                    Notification Settings
+                                </Button>
+                                <Button variant="outline" className="w-full justify-start">
+                                    <Palette className="mr-2 h-4 w-4" />
+                                    Appearance
+                                </Button>
+                                <Button variant="outline" className="w-full justify-start">
+                                    <Globe className="mr-2 h-4 w-4" />
+                                    Language & Region
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Delete Account Card */}
+                    <Card className="border-red-200 dark:border-red-800 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                    <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl text-red-900 dark:text-red-100">Danger Zone</CardTitle>
+                                    <CardDescription className="text-red-700 dark:text-red-300">
+                                        Permanently delete your account and all associated data
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <DeleteUser />
+                        </CardContent>
+                    </Card>
+                </div>
+            </SettingsLayout>
+        </AppLayout>
+    );
+}

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recommendation API Tester</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .response-container {
+            display: none;
+        }
+        .response-container.show {
+            display: block;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .item-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .item-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .item-detail {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .match-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 5px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🤖 AI Outfit Recommendation API Tester</h1>
+            <p class="subtitle">Test your AI recommendation endpoint without Postman</p>
+            
+            <form id="testForm">
+                <div class="form-group">
+                    <label for="userId">User ID</label>
+                    <input type="number" id="userId" value="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="temperature">Temperature (°C)</label>
+                    <input type="number" id="temperature" value="25" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weatherCondition">Weather Condition</label>
+                    <select id="weatherCondition">
+                        <option value="Clear">Clear</option>
+                        <option value="Clouds">Cloudy</option>
+                        <option value="Rain">Rainy</option>
+                        <option value="Snow">Snow</option>
+                        <option value="Thunderstorm">Thunderstorm</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="occasion">Occasion</label>
+                    <select id="occasion">
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                        <option value="party">Party</option>
+                        <option value="sport">Sport</option>
+                        <option value="business">Business</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxRecs">Max Recommendations</label>
+                    <input type="number" id="maxRecs" value="6" min="1" max="20" required>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">
+                    🚀 Get AI Recommendations
+                </button>
+            </form>
+        </div>
+        
+        <div class="response-container" id="responseContainer">
+            <div class="card">
+                <h2>📊 API Response</h2>
+                <div id="responseContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('testForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseContent = document.getElementById('responseContent');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Loading...';
+            responseContainer.classList.add('show');
+            responseContent.innerHTML = '<div class="loader"></div>';
+            
+            // Get form values
+            const userId = document.getElementById('userId').value;
+            const temperature = document.getElementById('temperature').value;
+            const weatherCondition = document.getElementById('weatherCondition').value;
+            const occasion = document.getElementById('occasion').value;
+            const maxRecs = document.getElementById('maxRecs').value;
+            
+            // Build request body
+            const requestBody = {
+                user_id: parseInt(userId),
+                weather: {
+                    main: {
+                        temp: parseFloat(temperature)
+                    },
+                    weather: [
+                        {
+                            main: weatherCondition
+                        }
+                    ]
+                },
+                occasion: occasion,
+                max_recommendations: parseInt(maxRecs)
+            };
+            
+            console.log('🚀 Sending request:', requestBody);
+            
+            try {
+                const response = await fetch('/api/test/ai-recommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                console.log('✅ Response:', data);
+                
+                if (data.success) {
+                    displaySuccess(data);
+                } else {
+                    displayError(data);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayError({ message: error.message });
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Get AI Recommendations';
+            }
+        });
+        
+        function displaySuccess(data) {
+            let html = `
+                <div class="success">
+                    ✅ <strong>Success!</strong> API is working perfectly!
+                </div>
+            `;
+            
+            // Display badges
+            html += `<div style="margin-bottom: 20px;">`;
+            html += `<span class="info-badge">ML Confidence: ${(data.ml_confidence * 100).toFixed(0)}%</span>`;
+            html += `<span class="info-badge">Items Considered: ${data.total_items_considered || 0}</span>`;
+            if (data.test_mode) {
+                html += `<span class="info-badge">🧪 Test Mode</span>`;
+            }
+            html += `</div>`;
+            
+            // Display recommendations
+            if (data.recommendations && data.recommendations.items) {
+                html += `
+                    <h3 style="margin: 20px 0 10px 0; color: #333;">
+                        ${data.recommendations.message || 'Recommendations'}
+                    </h3>
+                `;
+                
+                if (data.recommendations.reason) {
+                    html += `<p style="color: #666; margin-bottom: 15px;"><em>${data.recommendations.reason}</em></p>`;
+                }
+                
+                html += `<div class="items-grid">`;
+                data.recommendations.items.forEach(item => {
+                    html += `
+                        <div class="item-card">
+                            <h3>${item.name}</h3>
+                            <div class="item-detail"><strong>Brand:</strong> ${item.brand}</div>
+                            <div class="item-detail"><strong>Category:</strong> ${item.category}</div>
+                            <div class="item-detail"><strong>Color:</strong> ${item.color}</div>
+                            <div class="item-detail"><strong>Size:</strong> ${item.size}</div>
+                            ${item.description ? `<div class="item-detail" style="margin-top: 10px;">${item.description}</div>` : ''}
+                            ${item.match_score ? `<span class="match-score">Match: ${item.match_score}%</span>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            // Display full JSON response
+            html += `
+                <h3 style="margin-top: 30px; color: #333;">Full JSON Response:</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            
+            responseContent.innerHTML = html;
+        }
+        
+        function displayError(data) {
+            let html = `
+                <div class="error">
+                    ❌ <strong>Error!</strong> ${data.message || 'Something went wrong'}
+                </div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            responseContent.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
