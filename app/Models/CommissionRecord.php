@@ -10,19 +10,33 @@ class CommissionRecord extends Model
     use HasFactory;
 
     protected $fillable = [
+        'transaction_id',
+        'seller_id',
         'product_id',
         'user_id',
         'amount',
         'rate',
         'status',
         'paid_at',
+        'collected_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'rate' => 'decimal:2',
         'paid_at' => 'datetime',
+        'collected_at' => 'datetime',
     ];
+
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class);
+    }
+
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'seller_id');
+    }
 
     public function product()
     {

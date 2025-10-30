@@ -301,9 +301,14 @@ class TransactionController extends Controller
         // Create commission record
         CommissionRecord::create([
             'transaction_id' => $transaction->id,
-            'amount' => $transaction->commission_amount,
             'seller_id' => $transaction->seller_id,
+            'product_id' => $transaction->product_id,
+            'user_id' => $transaction->seller_id, // Keep for backward compatibility
+            'amount' => $transaction->commission_amount,
+            'rate' => 2.00, // 2% commission rate
+            'status' => 'paid', // Commission is automatically collected by platform
             'collected_at' => now(),
+            'paid_at' => now(), // Platform keeps commission immediately
         ]);
 
         // Mark product as sold

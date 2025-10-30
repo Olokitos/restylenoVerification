@@ -32,6 +32,7 @@ interface Product {
   brand: string;
   color: string;
   images: string[];
+  status: string;
   views: number;
   is_featured: boolean;
   created_at: string;
