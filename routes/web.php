@@ -264,6 +264,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // Transaction admin routes
     Route::post('transactions/{transaction}/verify-payment', [App\Http\Controllers\TransactionController::class, 'verifyPayment'])->name('transactions.verify-payment');
     Route::post('transactions/{transaction}/admin-complete', [App\Http\Controllers\TransactionController::class, 'adminComplete'])->name('transactions.admin-complete');
+    Route::patch('transactions/{transaction}/update-payout-info', [App\Http\Controllers\TransactionController::class, 'updateSellerPayoutInfo'])->name('admin.transactions.update-payout-info');
     
     // Commission routes
     Route::get('commissions', [App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('commissions.index');
@@ -272,6 +273,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     
     // Transaction management routes
     Route::get('transactions/pending-payments', [App\Http\Controllers\TransactionController::class, 'adminPendingPayments'])->name('transactions.pending-payments');
+    Route::post('transactions/{transaction}/upload-payout-proof', [App\Http\Controllers\TransactionController::class, 'uploadPayoutProof'])->name('admin.transactions.upload-payout-proof');
 });
 
 require __DIR__.'/settings.php';

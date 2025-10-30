@@ -20,6 +20,8 @@ class Transaction extends Model
         'status',
         'payment_method',
         'payment_proof_path',
+        'shipping_proof_path',
+        'delivery_proof_path',
         'gcash_reference',
         'payment_collected_by_platform',
         'platform_payment_reference',
@@ -33,6 +35,8 @@ class Transaction extends Model
         'released_at',
         'notes',
         'completed_at',
+        'payout_proof_path',
+        'seller_payout_details',
     ];
 
     protected $casts = [
@@ -49,6 +53,7 @@ class Transaction extends Model
         'delivered_at' => 'datetime',
         'released_at' => 'datetime',
         'completed_at' => 'datetime',
+        'seller_payout_details' => 'array',
     ];
 
     public function product()
@@ -102,7 +107,8 @@ class Transaction extends Model
      */
     public function canShip()
     {
-        return $this->status === 'payment_verified';
+        // Allow shipping as soon as payment is submitted (admin will verify both proofs)
+        return in_array($this->status, ['payment_submitted', 'payment_verified']);
     }
 
     /**

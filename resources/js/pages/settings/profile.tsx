@@ -5,7 +5,7 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
-import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon } from 'lucide-react';
+import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon, CreditCard } from 'lucide-react';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -274,6 +274,32 @@ export default function Profile({
                                                 </div>
                                                 <InputError message={errors.email} />
                                             </div>
+                                        </div>
+
+                                        {/* Payment Method / GCash Section */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="gcash_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                GCash Number
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="gcash_number"
+                                                    name="gcash_number"
+                                                    type="tel"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]{11,13}"
+                                                    className="pl-10 h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                                                    defaultValue={auth.user.gcash_number || ''}
+                                                    placeholder="09XXXXXXXXX"
+                                                    maxLength={13}
+                                                    minLength={11}
+                                                />
+                                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                                    <CreditCard className="h-4 w-4" />
+                                                </span>
+                                            </div>
+                                            <InputError message={errors.gcash_number} />
+                                            <div className="text-xs text-gray-600 dark:text-gray-400 pt-1">Enter your GCash mobile number for payouts. For PH numbers only. Example: 09171234567</div>
                                         </div>
 
                                         {/* Profile Picture Upload */}

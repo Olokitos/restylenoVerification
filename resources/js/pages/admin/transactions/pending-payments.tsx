@@ -178,7 +178,9 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                         <div className="flex-shrink-0">
                           {transaction.product.images[0] ? (
                             <img
-                              src={transaction.product.images[0]}
+                              src={transaction.product.images[0].startsWith('/storage')
+                                ? transaction.product.images[0]
+                                : `/storage/${transaction.product.images[0]}`}
                               alt={transaction.product.title}
                               className="w-16 h-16 object-cover rounded-lg"
                             />

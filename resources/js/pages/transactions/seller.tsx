@@ -19,6 +19,7 @@ import {
   Award
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
+import { usePage } from '@inertiajs/react';
 
 interface Transaction {
   id: number;
@@ -58,6 +59,8 @@ interface SellerTransactionsProps {
 export default function SellerTransactions({ transactions, stats }: SellerTransactionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { auth } = usePage().props as { auth: { user: { is_admin?: boolean } } };
+  const isAdmin = !!auth?.user?.is_admin;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -202,6 +205,8 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
               </CardContent>
             </Card>
 
+            {/* Total Commissions - visible to admins only */}
+            {isAdmin && (
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center">
@@ -219,6 +224,7 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
                 </div>
               </CardContent>
             </Card>
+            )}
 
             <Card>
               <CardContent className="pt-6">
@@ -305,7 +311,7 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
                         <div className="flex-shrink-0">
                           {transaction.product.images[0] ? (
                             <img
-                              src={transaction.product.images[0]}
+                              src={transaction.product.images[0].startsWith('/storage') ? transaction.product.images[0] : `/storage/${transaction.product.images[0]}`}
                               alt={transaction.product.title}
                               className="w-16 h-16 object-cover rounded-lg"
                             />
@@ -340,10 +346,12 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
                               <span className="text-gray-600 dark:text-gray-400">Sale Price:</span>
                               <span className="font-semibold">{formatPrice(transaction.sale_price)}</span>
                             </div>
+                            {isAdmin && (
                             <div className="flex items-center space-x-1">
                               <span className="text-gray-600 dark:text-gray-400">Commission (2%):</span>
                               <span className="font-semibold text-red-600">-{formatPrice(transaction.commission_amount)}</span>
                             </div>
+                            )}
                             <div className="flex items-center space-x-1">
                               <span className="text-gray-600 dark:text-gray-400">Your Earnings:</span>
                               <span className="font-bold text-green-600">{formatPrice(transaction.seller_earnings)}</span>

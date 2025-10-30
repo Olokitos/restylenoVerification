@@ -3,10 +3,11 @@
  * @param price - The price as a number
  * @returns Formatted price string with ₱ symbol
  */
-export function formatPrice(price: number): string {
-  return `₱${price.toLocaleString('en-PH', { 
-    minimumFractionDigits: 0, 
-    maximumFractionDigits: 0 
+export function formatPrice(price: number | string): string {
+  const parsed = Number(price);
+  return `₱${parsed.toLocaleString('en-PH', {
+    minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: parsed % 1 === 0 ? 0 : 2
   })}`;
 }
 

@@ -72,37 +72,20 @@ export default function MessagesIndex({ conversations }: MessagesIndexProps) {
   return (
     <AppLayout>
       <Head title="Messages" />
-      
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-slate-950 dark:via-purple-950 dark:to-slate-950">
-        <div className="flex h-full flex-1 flex-col gap-8 overflow-x-auto rounded-xl p-8">
-          {/* Modern Header */}
-          <div className="flex items-center justify-end">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
-                <MessageCircle className="h-6 w-6 text-white" />
-              </div>
-              <div className="text-right">
-                <p className="text-white/60 text-sm">Communication Hub</p>
-                <p className="text-white font-semibold">Messages</p>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/50 dark:via-emerald-950/30 dark:to-teal-950/50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Messages</h1>
+              <p className="text-gray-600 dark:text-gray-400">Chat with buyers and sellers</p>
             </div>
-          </div>
-
-          {/* Modern Page Title */}
-          <div className="text-center space-y-6">
-            <div className="inline-flex items-center space-x-3 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
-              <MessageCircle className="h-6 w-6 text-blue-400" />
-              <h1 className="text-3xl font-bold text-white">Messages</h1>
-            </div>
-            <p className="text-lg text-white/70 max-w-4xl mx-auto leading-relaxed">
-              Connect with other users, discuss products, and build meaningful relationships through our messaging system.
-            </p>
             <div className="flex items-center justify-center space-x-4">
-              <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-xl px-4 py-2 transition-all duration-300 hover:scale-105">
+              <Button className="border-green-200 bg-white/60 hover:bg-white/80 text-gray-900 dark:text-white dark:bg-gray-800/60 dark:hover:bg-gray-800/80 rounded-xl px-4 py-2 transition-all duration-200">
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
-              <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0 rounded-xl px-4 py-2 transition-all duration-300 hover:scale-105">
+              <Button className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-2 transition-all duration-200">
                 <Plus className="h-4 w-4 mr-2" />
                 New Message
               </Button>
@@ -111,51 +94,51 @@ export default function MessagesIndex({ conversations }: MessagesIndexProps) {
 
           {/* Conversations List */}
           {conversations.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-12 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-white/70 dark:bg-gray-800/60 border border-green-200 dark:border-green-800 rounded-2xl p-12 text-center">
+              <div className="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <MessageCircle className="h-12 w-12 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 No conversations yet
               </h3>
-              <p className="text-white/70 mb-6 max-w-md mx-auto">
+              <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
                 Start a conversation by clicking "Chat Seller" on any product in the marketplace.
               </p>
               <Link href="/marketplace">
-                <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0 rounded-xl px-8 py-3 transition-all duration-300 hover:scale-105">
+                <Button className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-8 py-3 transition-all duration-200">
                   Browse Marketplace
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {conversations.map((conversation) => (
                 <div 
                   key={conversation.id} 
-                  className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105 cursor-pointer"
+                  className="relative bg-white/70 dark:bg-gray-800/60 border border-green-200 dark:border-green-800 rounded-2xl p-5 hover:shadow-md transition-all duration-200"
                 >
                   <Link href={`/messages/${conversation.id}`}>
                     <div className="flex items-start space-x-4">
                       {/* User Avatar */}
                       <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center shadow">
                           <User className="h-6 w-6 text-white" />
                         </div>
                       </div>
 
                       {/* Conversation Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-white group-hover:text-pink-400 transition-colors">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {conversation.other_user.name}
                           </h3>
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm text-white/60">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
                               {formatTime(conversation.last_message_at)}
                             </span>
                             {conversation.unread_count > 0 && (
-                              <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                              <div className="px-2 h-6 bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                                 {conversation.unread_count}
                               </div>
                             )}
@@ -164,21 +147,21 @@ export default function MessagesIndex({ conversations }: MessagesIndexProps) {
 
                         {/* Product Info */}
                         {conversation.product && (
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Package className="h-4 w-4 text-white/60" />
-                            <span className="text-sm text-white/70">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <Package className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
                               About: {conversation.product.title}
                             </span>
-                                <span className="text-sm font-medium text-green-400">
-                                    {formatPrice(conversation.product.price)}
-                                </span>
+                            <span className="text-sm font-medium text-green-600">
+                              {formatPrice(conversation.product.price)}
+                            </span>
                           </div>
                         )}
 
                         {/* Subject */}
                         {conversation.subject && (
-                          <div className="mb-2">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white/80 border border-white/30">
+                          <div className="mb-1">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                               {conversation.subject}
                             </span>
                           </div>
@@ -186,8 +169,8 @@ export default function MessagesIndex({ conversations }: MessagesIndexProps) {
 
                         {/* Last Message */}
                         {conversation.last_message && (
-                          <p className="text-white/70 text-sm line-clamp-2">
-                            <span className={conversation.last_message.sender_id !== conversation.other_user.id ? 'font-medium text-white' : ''}>
+                          <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-2">
+                            <span className={conversation.last_message.sender_id !== conversation.other_user.id ? 'font-medium text-gray-900 dark:text-white' : ''}>
                               {conversation.last_message.sender_id === conversation.other_user.id ? '' : 'You: '}
                             </span>
                             {truncateMessage(conversation.last_message.message)}
@@ -197,11 +180,10 @@ export default function MessagesIndex({ conversations }: MessagesIndexProps) {
 
                       {/* Arrow */}
                       <div className="flex-shrink-0">
-                        <ArrowRight className="h-5 w-5 text-white/60 group-hover:text-pink-400 transition-colors" />
+                        <ArrowRight className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
                   </Link>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 to-purple-600"></div>
                 </div>
               ))}
             </div>

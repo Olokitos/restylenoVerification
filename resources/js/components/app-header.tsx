@@ -46,31 +46,12 @@ const getMainNavItems = (isAdmin: boolean): NavItem[] => [
 ];
 
 const rightNavItems: NavItem[] = [
-    {
-        title: 'Marketplace',
-        href: '/marketplace',
-        icon: Store,
-    },
-    {
-        title: 'My Purchases',
-        href: '/transactions/buyer',
-        icon: ShoppingBag,
-    },
-    {
-        title: 'My Sales',
-        href: '/transactions/seller',
-        icon: DollarSign,
-    },
-    {
-        title: 'Wardrobe',
-        href: '/wardrobe',
-        icon: Shirt,
-    },
-    {
-        title: 'Shop Profile',
-        href: '/shop-profile',
-        icon: User,
-    },
+  { title: 'Marketplace', href: '/marketplace', icon: Store },
+  { title: 'My Purchases', href: '/transactions/buyer', icon: ShoppingBag },
+  { title: 'My Sales', href: '/transactions/seller', icon: DollarSign },
+  { title: 'Wardrobe', href: '/wardrobe', icon: Shirt },
+  { title: 'Shop Profile', href: '/shop-profile', icon: User },
+  { title: 'Chat', href: '/messages', icon: MessageCircle },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -284,38 +265,32 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     <div className="ml-auto flex items-center space-x-2">
                         <div className="hidden lg:flex">
-                            {/* Admin Navigation - Show always for admin users */}
-                            {page.props.auth?.user?.is_admin && adminNavItems.map((item) => (
-                                <TooltipProvider
-                                    key={item.title}
-                                    delayDuration={0}
-                                >
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <Link
-                                                href={item.href}
-                                                className="group ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-                                            >
-                                                <span className="sr-only">
-                                                    {item.title}
-                                                </span>
-                                                {item.icon && (
-                                                    <Icon
-                                                        iconNode={item.icon}
-                                                        className="size-5 opacity-80 group-hover:opacity-100"
-                                                    />
-                                                )}
-                                            </Link>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{item.title}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            ))}
-                            
-                            {/* Regular Navigation - Show on non-admin pages OR on messages page for admin users */}
-                            {(!page.url.startsWith('/admin') || page.url === '/messages') && rightNavItems.map((item) => (
+                            {/* Show regular navigation for regular users, or admin navigation for admin users */}
+                            {page.props.auth?.user?.is_admin ? (
+                                // Always show admin navigation if is_admin
+                                adminNavItems.map((item) => (
+                                    <TooltipProvider key={item.title} delayDuration={0}>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <Link
+                                                    href={item.href}
+                                                    className="group ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                                >
+                                                    <span className="sr-only">{item.title}</span>
+                                                    {item.icon && (
+                                                        <Icon iconNode={item.icon} className="size-5 opacity-80 group-hover:opacity-100" />
+                                                    )}
+                                                </Link>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{item.title}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                ))
+                            ) : (
+                                // Regular user navigation
+                                rightNavItems.map((item) => (
                                 <TooltipProvider
                                     key={item.title}
                                     delayDuration={0}
@@ -380,7 +355,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-                            ))}
+                                ))
+                            )}
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

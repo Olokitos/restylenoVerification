@@ -117,386 +117,91 @@ export default function ShopProfile({ products, stats }: Props) {
         <AppLayout>
             <Head title="Shop Profile - Manage Your Items" />
             
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-slate-950 dark:via-purple-950 dark:to-slate-950">
-                {/* Modern Header */}
-                <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+            <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/50 dark:via-emerald-950/30 dark:to-teal-950/50">
+                {/* Updated header: clean, minimalist, like wardrobe */}
+                <div className="border-b border-green-200/60 dark:border-green-800/50 bg-white/40 dark:bg-green-950/30 backdrop-blur-sm shadow-none">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center justify-between h-20">
-                            <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
-                                    <Package className="h-6 w-6 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-white">My Shop Profile</h1>
-                                    <p className="text-white/60 text-sm">Manage your items and track performance</p>
-                                </div>
+                        <div className="flex items-center gap-4 h-20">
+                            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-400 rounded-xl flex items-center justify-center shadow-lg">
+                                <Package className="h-6 w-6 text-white" />
                             </div>
-                            <div className="flex items-center space-x-3">
-                                <div className="text-right">
-                                    <p className="text-white/60 text-sm">Shop Status</p>
-                                    <p className="text-white font-semibold">Active Seller</p>
-                                </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-green-900 dark:text-white">My Shop Profile</h1>
+                                <p className="text-green-800/70 dark:text-green-300/80 text-xs md:text-sm">Manage your items and track performance</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Page Title */}
-                    <div className="text-center space-y-6 mb-12">
-                        <div className="inline-flex items-center space-x-3 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
-                            <Package className="h-6 w-6 text-blue-400" />
-                            <h2 className="text-3xl font-bold text-white">Shop Management</h2>
-                        </div>
-                        <p className="text-lg text-white/70 max-w-4xl mx-auto leading-relaxed">
-                            Track your inventory, manage sales, and monitor your shop performance with comprehensive analytics and controls.
-                        </p>
-                    </div>
+                {/* Stats Row - lighter, pill-style cards */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+                    <Card className="border-green-200 dark:border-green-800 bg-white/70 dark:bg-green-950/50 shadow-none">
+                      <CardContent className="py-4 text-center">
+                        <div className="text-xl font-bold text-green-600 dark:text-emerald-300">{stats.totalItems}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">Total Items</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/70 dark:bg-green-950/50 shadow-none">
+                      <CardContent className="py-4 text-center">
+                        <div className="text-xl font-bold text-green-600 dark:text-emerald-300">{stats.activeItems}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">Active</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/70 dark:bg-green-950/50 shadow-none">
+                      <CardContent className="py-4 text-center">
+                        <div className="text-xl font-bold text-green-600 dark:text-emerald-300">{stats.totalViews}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">Views</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/70 dark:bg-green-950/50 shadow-none">
+                      <CardContent className="py-4 text-center">
+                        <div className="text-xl font-bold text-green-600 dark:text-emerald-300">{stats.totalSold}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">Sold</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/70 dark:bg-green-950/50 shadow-none">
+                      <CardContent className="py-4 text-center">
+                        <div className="text-xl font-bold text-green-600 dark:text-emerald-300">₱{stats.totalValue.toLocaleString()}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">Inventory Value</div>
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-                        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                                    <Package className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-white">{stats.totalItems}</div>
-                                    <div className="text-sm text-white/60">Total Items</div>
-                                </div>
+                  {/* Products Grid - wardrobe style */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+                    {products.map((product) => (
+                      <Card key={product.id} className="border-green-200 dark:border-green-800 bg-white/95 dark:bg-green-950/70 rounded-xl shadow hover:shadow-lg transition duration-200 p-2">
+                        <CardContent className="px-2 pt-2 pb-2">
+                          <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-2 flex items-center justify-center">
+                            <img
+                              src={`/storage/${product.images[0]}`}
+                              alt={product.title}
+                              className="object-cover w-full h-full rounded-lg"
+                              style={{ maxHeight: 220 }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-semibold text-green-800 dark:text-emerald-300 line-clamp-1">{product.title}</span>
+                            <Badge className={`text-xs ml-2 border-none ${conditionColors[product.condition]}`}>{conditionLabels[product.condition]}</Badge>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-200 mb-1 line-clamp-1">{product.brand} {product.size}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{product.category?.name}</div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-lg font-bold text-green-600 dark:text-emerald-200">₱{product.price.toLocaleString()}</span>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(product)} title="Edit">
+                                <Edit className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} title="Delete">
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
                             </div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-                        </div>
-
-                        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                                    <TrendingUp className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-white">{stats.activeItems}</div>
-                                    <div className="text-sm text-white/60">Active Items</div>
-                                </div>
-                            </div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
-                        </div>
-
-                        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                                    <Eye className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-white">{stats.totalViews}</div>
-                                    <div className="text-sm text-white/60">Total Views</div>
-                                </div>
-                            </div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                        </div>
-
-                        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                                    <DollarSign className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-white">{stats.soldItems}</div>
-                                    <div className="text-sm text-white/60">Sold Items</div>
-                                </div>
-                            </div>
-                            <div className="text-xs text-white/70 mt-2">{formatPrice(stats.soldValue)} earned</div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500"></div>
-                        </div>
-
-                        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
-                                    <DollarSign className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-white">{formatPrice(stats.totalValue)}</div>
-                                    <div className="text-sm text-white/60">Active Value</div>
-                                </div>
-                            </div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-orange-500"></div>
-                        </div>
-                    </div>
-
-                    {/* Action Bar */}
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-8">
-                        <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-                            <div className="flex items-center space-x-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search your items..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                                    <Filter className="w-4 h-4 mr-2" />
-                                    Filter
-                                </Button>
-                            </div>
-                            
-                            <div className="flex items-center space-x-4">
-                                <div className="flex items-center bg-white/10 rounded-xl p-1">
-                                    <Button
-                                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                                        size="sm"
-                                        onClick={() => setViewMode('grid')}
-                                        className={`h-8 w-8 p-0 ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
-                                    >
-                                        <Grid3X3 className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
-                                        size="sm"
-                                        onClick={() => setViewMode('list')}
-                                        className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
-                                    >
-                                        <List className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                                
-                                <Link href="/marketplace/create">
-                                    <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 rounded-xl px-6 py-2 font-semibold transition-all duration-300 hover:scale-105">
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Add New Item
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Items Management */}
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-2xl font-bold text-white mb-2">Your Items</h3>
-                                <p className="text-white/70">
-                                    Manage your listed items. You can edit, activate/deactivate, mark as sold, or delete them.
-                                </p>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm text-white/60">
-                                <span>{filteredProducts.length} items</span>
-                                <span>•</span>
-                                <span>{products.filter(p => p.status === 'active').length} active</span>
-                                <span>•</span>
-                                <span>{products.filter(p => p.status === 'sold').length} sold</span>
-                            </div>
-                        </div>
-                        <div>
-                            {filteredProducts.length === 0 ? (
-                                <div className="text-center py-16">
-                                    <div className="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <Package className="h-12 w-12 text-blue-400" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-white mb-2">No items yet</h3>
-                                    <p className="text-white/70 mb-6 max-w-md mx-auto">
-                                        Start building your shop by adding your first item. Showcase your products to the community!
-                                    </p>
-                                    <Link href="/marketplace/create">
-                                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 rounded-xl px-8 py-3 font-semibold transition-all duration-300 hover:scale-105">
-                                            <Plus className="w-5 h-5 mr-2" />
-                                            Add Your First Item
-                                        </Button>
-                                    </Link>
-                                </div>
-                            ) : (
-                                <div className={viewMode === 'grid' 
-                                    ? "grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-                                    : "space-y-4"
-                                }>
-                                    {filteredProducts.map((product) => (
-                                        <div key={product.id} className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                                            {/* Product Image */}
-                                            <div className="relative aspect-square bg-gradient-to-br from-white/5 to-white/10 rounded-t-2xl overflow-hidden">
-                                                {product.images && product.images.length > 0 ? (
-                                                    <img 
-                                                        src={`/storage/${product.images[0]}`} 
-                                                        alt={product.title}
-                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <div className="text-center">
-                                                            <ImageIcon className="h-12 w-12 text-white/40 mx-auto mb-2" />
-                                                            <p className="text-sm text-white/60">No image</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {/* Overlay with actions */}
-                                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                    <div className="flex space-x-2">
-                                                        <Button size="sm" className="bg-white/90 hover:bg-white text-gray-900">
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button size="sm" className="bg-white/90 hover:bg-white text-gray-900">
-                                                            <Heart className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button size="sm" className="bg-white/90 hover:bg-white text-gray-900">
-                                                            <Share2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Status Badge */}
-                                                <div className="absolute top-3 left-3">
-                                                    <Badge className={
-                                                        product.status === 'active' 
-                                                            ? 'bg-green-500/20 text-green-400 border-green-400/30 backdrop-blur-sm'
-                                                            : product.status === 'sold'
-                                                            ? 'bg-orange-500/20 text-orange-400 border-orange-400/30 backdrop-blur-sm'
-                                                            : 'bg-white/20 text-white/80 border-white/30 backdrop-blur-sm'
-                                                    }>
-                                                        {product.status}
-                                                    </Badge>
-                                                </div>
-                                                
-                                                {/* Featured Badge */}
-                                                {product.is_featured && (
-                                                    <Badge className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 backdrop-blur-sm">
-                                                        <Star className="h-3 w-3 mr-1" />
-                                                        Featured
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Product Info */}
-                                            <div className="p-5">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-400/30 backdrop-blur-sm">
-                                                        <Tag className="h-3 w-3 mr-1" />
-                                                        {product.category.name}
-                                                    </Badge>
-                                                    <div className="flex items-center text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
-                                                        <Eye className="h-3 w-3 mr-1" />
-                                                        {product.views}
-                                                    </div>
-                                                </div>
-                                                
-                                                <h3 className="font-semibold text-white text-sm mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
-                                                    {product.title}
-                                                </h3>
-                                                
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-xl font-bold text-blue-400">
-                                                        {formatPrice(product.price)}
-                                                    </span>
-                                                    <Badge className={
-                                                        product.condition === 'new' 
-                                                            ? 'bg-green-500/20 text-green-400 border-green-400/30 backdrop-blur-sm'
-                                                            : product.condition === 'like_new'
-                                                            ? 'bg-blue-500/20 text-blue-400 border-blue-400/30 backdrop-blur-sm'
-                                                            : product.condition === 'good'
-                                                            ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30 backdrop-blur-sm'
-                                                            : product.condition === 'fair'
-                                                            ? 'bg-orange-500/20 text-orange-400 border-orange-400/30 backdrop-blur-sm'
-                                                            : 'bg-red-500/20 text-red-400 border-red-400/30 backdrop-blur-sm'
-                                                    }>
-                                                        {conditionLabels[product.condition as keyof typeof conditionLabels]}
-                                                    </Badge>
-                                                </div>
-                                                
-                                                <div className="text-xs text-white/60 mb-4 space-y-1">
-                                                    <div className="flex items-center">
-                                                        <span className="font-medium">Size:</span>
-                                                        <span className="ml-2">{product.size}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="font-medium">Color:</span>
-                                                        <span className="ml-2">{product.color || 'N/A'}</span>
-                                                    </div>
-                                                    {product.brand && (
-                                                        <div className="flex items-center">
-                                                            <span className="font-medium">Brand:</span>
-                                                            <span className="ml-2">{product.brand}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                    
-                                                {/* Action Buttons */}
-                                                <div className="space-y-2">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline"
-                                                            className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
-                                                            onClick={() => setSelectedProduct(product)}
-                                                        >
-                                                            <Eye className="h-3 w-3 mr-1" />
-                                                            View
-                                                        </Button>
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline"
-                                                            className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
-                                                            onClick={() => router.get(`/shop-profile/${product.id}/edit`)}
-                                                        >
-                                                            <Edit className="h-3 w-3 mr-1" />
-                                                            Edit
-                                                        </Button>
-                                                    </div>
-                                                    
-                                                    {/* Status-specific actions */}
-                                                    {product.status === 'active' && (
-                                                        <Button 
-                                                            size="sm" 
-                                                            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 rounded-xl text-xs font-semibold transition-all duration-300 hover:scale-105"
-                                                            onClick={() => handleMarkAsSold(product.id)}
-                                                        >
-                                                            <DollarSign className="h-3 w-3 mr-1" />
-                                                            Mark as Sold
-                                                        </Button>
-                                                    )}
-                                                    
-                                                    {product.status === 'sold' && (
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline"
-                                                            className="w-full bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-400/30 text-red-400 hover:bg-red-500/30 text-xs font-semibold transition-all duration-300 hover:scale-105"
-                                                            onClick={() => handleDelete(product.id)}
-                                                        >
-                                                            <Trash2 className="h-3 w-3 mr-1" />
-                                                            Delete
-                                                        </Button>
-                                                    )}
-                                                    
-                                                    {product.status !== 'sold' && (
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline"
-                                                                className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
-                                                                onClick={() => handleToggleStatus(product.id, product.status)}
-                                                            >
-                                                                {product.status === 'active' ? 'Hide' : 'Show'}
-                                                            </Button>
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline"
-                                                                onClick={() => handleDelete(product.id)}
-                                                                className="text-red-400 hover:text-red-300 hover:bg-red-500/20 border-red-400/30 text-xs bg-red-500/10"
-                                                            >
-                                                                <Trash2 className="h-3 w-3 mr-1" />
-                                                                Delete
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
             </div>
         </AppLayout>

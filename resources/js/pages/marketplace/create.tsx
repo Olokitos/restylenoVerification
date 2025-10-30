@@ -46,8 +46,8 @@ interface SellItemPageProps {
 }
 
 const defaultCategories = [
-  'Shirt',
   'T-shirt',
+  'Polo',
   'Pants',
   'Shorts',
   'Dress',
@@ -125,6 +125,14 @@ export default function SellItem({ categories }: SellItemPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Sell Item" />
+            {/* Display global server-side errors */}
+            {errors && Object.keys(errors).length > 0 && (
+                <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-800 rounded">
+                    {Object.entries(errors).map(([field, message]) => (
+                        <div key={field}>{message}</div>
+                    ))}
+                </div>
+            )}
             
             <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/30 dark:to-green-800/20">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

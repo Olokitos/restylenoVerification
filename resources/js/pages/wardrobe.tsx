@@ -47,8 +47,41 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const categories = ['T-shirt', 'Shirt', 'Pants', 'Shorts', 'Dress', 'Shoes', 'Hat', 'Accessories'];
-const colors = ['Black', 'White', 'Blue', 'Red', 'Green', 'Yellow', 'Pink', 'Purple', 'Brown', 'Gray'];
+const categories = ['T-shirt', 'Polo', 'Pants', 'Shorts', 'Dress', 'Shoes', 'Hat', 'Accessories'];
+const colors = [
+  'Black',
+  'White',
+  'Blue',
+  'Navy',
+  'Sky Blue',
+  'Teal',
+  'Red',
+  'Maroon',
+  'Green',
+  'Emerald',
+  'Olive',
+  'Lime',
+  'Yellow',
+  'Gold',
+  'Orange',
+  'Pink',
+  'Rose',
+  'Purple',
+  'Lavender',
+  'Violet',
+  'Brown',
+  'Beige',
+  'Khaki',
+  'Tan',
+  'Gray',
+  'Silver',
+  'Charcoal',
+  'Cream',
+  'Ivory',
+  'Mint',
+  'Coral',
+  'Turquoise',
+];
 const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50'];
 
 interface WardrobeItem {

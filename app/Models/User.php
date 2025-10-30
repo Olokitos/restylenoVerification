@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'profile_picture',
+        'gcash_number', // allow mass assignment
     ];
 
     /**

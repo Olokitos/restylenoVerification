@@ -109,8 +109,8 @@ class TransactionController extends Controller
      */
     public function show(Transaction $transaction)
     {
-        // Check if user is involved in this transaction
-        if ($transaction->buyer_id !== auth()->id() && $transaction->seller_id !== auth()->id()) {
+        // Allow buyer, seller, or admin to view transaction
+        if (!auth()->user()?->is_admin && $transaction->buyer_id !== auth()->id() && $transaction->seller_id !== auth()->id()) {
             abort(403);
         }
 
@@ -120,10 +120,10 @@ class TransactionController extends Controller
             'transaction' => $transaction,
             'canAct' => [
                 'canSubmitPayment' => $transaction->status === 'pending_payment' && $transaction->buyer_id === auth()->id(),
-                'canVerifyPayment' => $transaction->status === 'payment_submitted' && auth()->user()->is_admin,
+                'canVerifyPayment' => $transaction->status === 'payment_submitted' && auth()->user()?->is_admin,
                 'canShip' => $transaction->canShip() && $transaction->seller_id === auth()->id(),
                 'canConfirmDelivery' => $transaction->status === 'shipped' && $transaction->buyer_id === auth()->id(),
-                'canComplete' => $transaction->canComplete() && auth()->user()->is_admin,
+                'canComplete' => $transaction->canComplete() && auth()->user()?->is_admin,
                 'canCancel' => in_array($transaction->status, ['pending_payment', 'payment_submitted']) && 
                               ($transaction->buyer_id === auth()->id() || $transaction->seller_id === auth()->id()),
             ]
@@ -245,9 +245,18 @@ class TransactionController extends Controller
             abort(403);
         }
 
+        // Require shipping proof image
+        request()->validate([
+            'shipping_proof' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+        ]);
+
+        $imageName = time() . '_' . request()->file('shipping_proof')->getClientOriginalName();
+        $imagePath = request()->file('shipping_proof')->storeAs('shipping-proofs', $imageName, 'public');
+
         $transaction->update([
             'status' => 'shipped',
             'shipped_at' => now(),
+            'shipping_proof_path' => $imagePath,
         ]);
 
         return redirect()->back()->with('success', 'Product marked as shipped successfully!');
@@ -262,9 +271,21 @@ class TransactionController extends Controller
             abort(403);
         }
 
+        // Optional delivery proof upload
+        if (request()->hasFile('delivery_proof')) {
+            request()->validate([
+                'delivery_proof' => 'image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+            ]);
+
+            $imageName = time() . '_' . request()->file('delivery_proof')->getClientOriginalName();
+            $imagePath = request()->file('delivery_proof')->storeAs('delivery-proofs', $imageName, 'public');
+            $transaction->delivery_proof_path = $imagePath;
+        }
+
         $transaction->update([
             'status' => 'delivered',
             'delivered_at' => now(),
+            'delivery_proof_path' => $transaction->delivery_proof_path ?? $transaction->delivery_proof_path,
         ]);
 
         // Auto-complete transaction
@@ -389,5 +410,45 @@ class TransactionController extends Controller
                 'total_sales' => Transaction::where('seller_id', auth()->id())->where('status', 'completed')->count(),
             ]
         ]);
+    }
+
+    /**
+     * Admin uploads payout proof image for seller payout
+     */
+    public function uploadPayoutProof(Request $request, Transaction $transaction)
+    {
+        if (!auth()->user()?->is_admin) abort(403);
+
+        $request->validate([
+            'payout_proof' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+        ]);
+
+        $imageName = time() . '_' . $request->file('payout_proof')->getClientOriginalName();
+        $imagePath = $request->file('payout_proof')->storeAs('payout-proofs', $imageName, 'public');
+
+        $transaction->update(['payout_proof_path' => $imagePath]);
+
+        return back()->with('success', 'Payout proof uploaded successfully.');
+    }
+
+    /**
+     * Seller updates payout (GCash/Bank) info
+     */
+    public function updateSellerPayoutInfo(Request $request, Transaction $transaction)
+    {
+        if ($transaction->seller_id !== auth()->id()) abort(403);
+
+        $validated = $request->validate([
+            'gcash_number' => 'nullable|string|max:32',
+            'bank_name' => 'nullable|string|max:64',
+            'bank_account' => 'nullable|string|max:64',
+            'other_details' => 'nullable|string|max:255',
+        ]);
+
+        $transaction->update([
+            'seller_payout_details' => array_filter($validated),
+        ]);
+
+        return back()->with('success', 'Payout info updated!');
     }
 }

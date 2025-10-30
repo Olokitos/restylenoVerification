@@ -105,7 +105,7 @@ export default function MessagesShow({ conversation, messages }: MessagesShowPro
     <AppLayout>
       <Head title={`Chat with ${conversation.other_user.name}`} />
       
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/30 dark:to-green-800/20">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/50 dark:via-emerald-950/30 dark:to-teal-950/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -222,12 +222,12 @@ export default function MessagesShow({ conversation, messages }: MessagesShowPro
                           <div className={`flex ${message.is_own ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                               message.is_own 
-                                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white' 
+                                ? 'bg-green-600 text-white' 
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
                             }`}>
                               <p className="text-sm">{message.message}</p>
                               <div className={`flex items-center justify-between mt-1 text-xs ${
-                                message.is_own ? 'text-pink-100' : 'text-gray-500 dark:text-gray-400'
+                                message.is_own ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'
                               }`}>
                                 <span>{formatTime(message.created_at)}</span>
                                 {message.is_own && (
@@ -256,7 +256,7 @@ export default function MessagesShow({ conversation, messages }: MessagesShowPro
                     <Button 
                       type="submit" 
                       disabled={processing || !data.message.trim()}
-                      className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       <Send className="h-4 w-4" />
                     </Button>

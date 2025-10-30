@@ -176,7 +176,7 @@ export default function SubmitPayment({ transaction }: SubmitPaymentProps) {
                         <div>
                           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">GCash</p>
                           <div className="bg-white dark:bg-gray-700 p-3 rounded border">
-                            <p className="font-mono text-lg font-bold text-green-600">09123456789</p>
+                            <p className="font-mono text-lg font-bold text-green-600">09761083939</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Restyle Platform</p>
                           </div>
                         </div>

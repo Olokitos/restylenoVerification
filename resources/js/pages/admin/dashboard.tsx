@@ -57,183 +57,96 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin Dashboard" />
             
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-slate-950 dark:via-purple-950 dark:to-slate-950">
-                <div className="flex h-full flex-1 flex-col gap-8 overflow-x-auto rounded-xl p-8">
-                {/* Modern Header */}
-                <div className="flex items-center justify-end">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                            <Crown className="h-6 w-6 text-white" />
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                            <Crown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div className="text-right">
-                            <p className="text-white/60 text-sm">Admin Panel</p>
-                            <p className="text-white font-semibold">System Control</p>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+                            <p className="text-gray-600 dark:text-gray-400">Administrative Control Center</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Modern Page Title */}
-                <div className="text-center space-y-6">
-                    <div className="inline-flex items-center space-x-3 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
-                        <Shield className="h-6 w-6 text-yellow-400" />
-                        <h1 className="text-3xl font-bold text-white">Administrative Control Center</h1>
-                    </div>
-                    <p className="text-lg text-white/70 max-w-4xl mx-auto leading-relaxed">
-                        Comprehensive platform management with advanced analytics and user control systems. 
-                        Monitor performance, manage resources, and maintain system integrity.
-                    </p>
+                {/* Stats Grid - simplified like User Management */}
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalUsers}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Total Users</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeUsers}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Active Users</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.newThisWeek}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">New This Week</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.totalWardrobeItems}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Wardrobe Items</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Modern Stats Grid */}
-                <div className="grid gap-6 md:grid-cols-4">
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                                <Users className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.totalUsers}</div>
-                                <div className="text-sm text-white/60">Total Users</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                                <UserCheck className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.activeUsers}</div>
-                                <div className="text-sm text-white/60">Active Users</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.newThisWeek}</div>
-                                <div className="text-sm text-white/60">New This Week</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                                <Package className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.totalWardrobeItems}</div>
-                                <div className="text-sm text-white/60">Wardrobe Items</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                    </div>
+                {/* Secondary Stats */}
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalProducts}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Total Products</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeProducts}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Active Products</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">{stats.totalTransactions}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Total Transactions</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.pendingPayments}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Pending Payments</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Additional Modern Stats */}
-                <div className="grid gap-6 md:grid-cols-4">
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
-                                <ShoppingBag className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.totalProducts}</div>
-                                <div className="text-sm text-white/60">Total Products</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-blue-600"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                                <Activity className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.activeProducts}</div>
-                                <div className="text-sm text-white/60">Active Products</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-cyan-600"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-600 rounded-xl flex items-center justify-center">
-                                <BarChart3 className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.totalTransactions}</div>
-                                <div className="text-sm text-white/60">Total Transactions</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-pink-600"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
-                                <Clock className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.pendingPayments}</div>
-                                <div className="text-sm text-white/60">Pending Payments</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-orange-500"></div>
-                    </div>
-                </div>
-
-                {/* Financial Stats */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <div className="group relative overflow-hidden bg-gradient-to-r from-emerald-500/20 to-green-500/20 backdrop-blur-sm border border-emerald-500/30 rounded-2xl p-6 hover:from-emerald-500/30 hover:to-green-500/30 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{formatPrice(stats.totalCommissions)}</div>
-                                <div className="text-sm text-white/60">Total Commissions</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-green-500"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-gradient-to-r from-green-500/20 to-teal-500/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:from-green-500/30 hover:to-teal-500/30 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{formatPrice(stats.thisMonthCommissions)}</div>
-                                <div className="text-sm text-white/60">This Month</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-teal-500"></div>
-                    </div>
-                    
-                    <div className="group relative overflow-hidden bg-gradient-to-r from-blue-500/20 to-indigo-500/20 backdrop-blur-sm border border-blue-500/30 rounded-2xl p-6 hover:from-blue-500/30 hover:to-indigo-500/30 transition-all duration-300 hover:scale-105">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                                <BarChart3 className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-white">{stats.completedTransactions}</div>
-                                <div className="text-sm text-white/60">Completed Sales</div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                    </div>
+                {/* Commissions */}
+                <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="border-gray-200 dark:border-gray-700">
+                        <CardHeader>
+                            <CardTitle className="text-xl">Total Commissions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="text-3xl font-bold text-gray-900 dark:text-white">{formatPrice(stats.totalCommissions)}</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-gray-200 dark:border-gray-700 md:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="text-xl">This Month</CardTitle>
+                            <CardDescription>Commission earnings this month</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="text-3xl font-bold text-gray-900 dark:text-white">{formatPrice(stats.thisMonthCommissions)}</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Admin Actions */}

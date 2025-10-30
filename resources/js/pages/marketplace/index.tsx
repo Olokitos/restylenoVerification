@@ -471,228 +471,230 @@ export default function MarketplaceIndex({
                                 </Card>
                             ) : (
                                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {products.data.map((product) => (
-                                        <Card 
-                                            key={product.id} 
-                                            className="group border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                                        >
-                                            <CardContent className="p-0">
-                                                {/* Product Image */}
-                                                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden group">
-                                                    {getCurrentImage(product) ? (
-                                                        <>
-                                                            <img 
-                                                                src={`/storage/${getCurrentImage(product)}`} 
-                                                                alt={product.title}
-                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                            />
-                                                            
-                                                            {/* Image Navigation - Only show if multiple images */}
-                                                            {getImageCount(product) > 1 && (
-                                                                <>
-                                                                    {/* Navigation Arrows */}
-                                                                    <div className="absolute inset-0 flex items-center justify-between px-2 z-20 pointer-events-none">
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                prevImage(product.id, getImageCount(product));
-                                                                            }}
-                                                                            className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
-                                                                            aria-label="Previous image"
-                                                                        >
-                                                                            <ChevronLeft className="h-4 w-4" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                nextImage(product.id, getImageCount(product));
-                                                                            }}
-                                                                            className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
-                                                                            aria-label="Next image"
-                                                                        >
-                                                                            <ChevronRight className="h-4 w-4" />
-                                                                        </button>
-                                                                    </div>
-                                                                    
-                                                                    {/* Dots Indicator */}
-                                                                    <div className="absolute bottom-2 left-0 right-0 flex justify-center items-center gap-1.5 z-10">
-                                                                        {Array.from({ length: getImageCount(product) }).map((_, index) => (
+                                    {products.data
+                                        .filter(product => !isOwnProduct(product))
+                                        .map((product) => (
+                                            <Card 
+                                                key={product.id} 
+                                                className="group border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                                            >
+                                                <CardContent className="p-0">
+                                                    {/* Product Image */}
+                                                    <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden group">
+                                                        {getCurrentImage(product) ? (
+                                                            <>
+                                                                <img 
+                                                                    src={`/storage/${getCurrentImage(product)}`} 
+                                                                    alt={product.title}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                                />
+                                                                
+                                                                {/* Image Navigation - Only show if multiple images */}
+                                                                {getImageCount(product) > 1 && (
+                                                                    <>
+                                                                        {/* Navigation Arrows */}
+                                                                        <div className="absolute inset-0 flex items-center justify-between px-2 z-20 pointer-events-none">
                                                                             <button
-                                                                                key={index}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
-                                                                                    setCurrentImageIndex(prev => ({
-                                                                                        ...prev,
-                                                                                        [product.id]: index
-                                                                                    }));
+                                                                                    prevImage(product.id, getImageCount(product));
                                                                                 }}
-                                                                                className={`rounded-full transition-all ${
-                                                                                    (currentImageIndex[product.id] || 0) === index 
-                                                                                        ? 'bg-white w-2 h-2 scale-125 shadow-lg' 
-                                                                                        : 'bg-white/60 hover:bg-white/80 w-1.5 h-1.5'
-                                                                                }`}
-                                                                                aria-label={`Go to image ${index + 1}`}
-                                                                            />
-                                                                        ))}
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <ShoppingBag className="h-12 w-12 text-gray-400" />
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* Your Listing Badge */}
-                                                    {isOwnProduct(product) && (
-                                                        <Badge className="absolute top-2 left-2 bg-blue-600 text-white z-10">
-                                                            Your Listing
-                                                        </Badge>
-                                                    )}
-                                                    
-                                                    {/* Discount Badge */}
-                                                    {product.condition === 'new' && !isOwnProduct(product) && (
-                                                        <Badge className="absolute top-2 left-2 bg-red-500 text-white z-10">
-                                                            New
-                                                        </Badge>
-                                                    )}
-                                                    
-                                                    {/* Featured Badge */}
-                                                    {product.is_featured && (
-                                                        <Badge className="absolute top-2 right-2 bg-yellow-500 text-white z-10">
-                                                            <Star className="h-3 w-3 mr-1" />
-                                                            Featured
-                                                        </Badge>
-                                                    )}
-                                                    
-                                                    {/* Quick Actions Overlay */}
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end justify-center pb-12 z-10">
-                                                        <div className="flex space-x-2">
-                                                            {isOwnProduct(product) ? (
-                                                                <>
-                                                                    {/* Own Product - Show Edit and Mark as Sold */}
-                                                                    <Button 
-                                                                        size="sm" 
-                                                                        variant="secondary" 
-                                                                        className="bg-white/95 hover:bg-white shadow-lg"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            router.get(`/marketplace/${product.id}/edit`);
-                                                                        }}
-                                                                        title="Edit listing"
-                                                                    >
-                                                                        <Edit className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button 
-                                                                        size="sm" 
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if (confirm('Mark this item as sold?')) {
-                                                                                router.patch(`/marketplace/${product.id}/mark-sold`);
-                                                                            }
-                                                                        }}
-                                                                        title="Mark as sold"
-                                                                    >
-                                                                        <Tag className="h-4 w-4" />
-                                                                    </Button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    {/* Other's Product - Show Favorite and Contact */}
-                                                                    <Button 
-                                                                        size="sm" 
-                                                                        variant="secondary" 
-                                                                        className={`bg-white/95 hover:bg-white ${favorites.includes(product.id) ? 'text-red-500' : ''} shadow-lg`}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            toggleFavorite(product.id);
-                                                                        }}
-                                                                        title="Add to favorites"
-                                                                    >
-                                                                        <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
-                                                                    </Button>
-                                                                    <Button 
-                                                                        size="sm" 
-                                                                        className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            contactSeller(product.id, product.user.id, product.title);
-                                                                        }}
-                                                                        title="Contact seller"
-                                                                    >
-                                                                        <MessageCircle className="h-4 w-4" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
+                                                                                className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
+                                                                                aria-label="Previous image"
+                                                                            >
+                                                                                <ChevronLeft className="h-4 w-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    nextImage(product.id, getImageCount(product));
+                                                                                }}
+                                                                                className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
+                                                                                aria-label="Next image"
+                                                                            >
+                                                                                <ChevronRight className="h-4 w-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                        
+                                                                        {/* Dots Indicator */}
+                                                                        <div className="absolute bottom-2 left-0 right-0 flex justify-center items-center gap-1.5 z-10">
+                                                                            {Array.from({ length: getImageCount(product) }).map((_, index) => (
+                                                                                <button
+                                                                                    key={index}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setCurrentImageIndex(prev => ({
+                                                                                            ...prev,
+                                                                                            [product.id]: index
+                                                                                        }));
+                                                                                    }}
+                                                                                    className={`rounded-full transition-all ${
+                                                                                        (currentImageIndex[product.id] || 0) === index 
+                                                                                            ? 'bg-white w-2 h-2 scale-125 shadow-lg' 
+                                                                                            : 'bg-white/60 hover:bg-white/80 w-1.5 h-1.5'
+                                                                                    }`}
+                                                                                    aria-label={`Go to image ${index + 1}`}
+                                                                                />
+                                                                            ))}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <ShoppingBag className="h-12 w-12 text-gray-400" />
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Your Listing Badge */}
+                                                        {isOwnProduct(product) && (
+                                                            <Badge className="absolute top-2 left-2 bg-blue-600 text-white z-10">
+                                                                Your Listing
+                                                            </Badge>
+                                                        )}
+                                                        
+                                                        {/* Discount Badge */}
+                                                        {product.condition === 'new' && !isOwnProduct(product) && (
+                                                            <Badge className="absolute top-2 left-2 bg-red-500 text-white z-10">
+                                                                New
+                                                            </Badge>
+                                                        )}
+                                                        
+                                                        {/* Featured Badge */}
+                                                        {product.is_featured && (
+                                                            <Badge className="absolute top-2 right-2 bg-yellow-500 text-white z-10">
+                                                                <Star className="h-3 w-3 mr-1" />
+                                                                Featured
+                                                            </Badge>
+                                                        )}
+                                                        
+                                                        {/* Quick Actions Overlay */}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end justify-center pb-12 z-10">
+                                                            <div className="flex space-x-2">
+                                                                {isOwnProduct(product) ? (
+                                                                    <>
+                                                                        {/* Own Product - Show Edit and Mark as Sold */}
+                                                                        <Button 
+                                                                            size="sm" 
+                                                                            variant="secondary" 
+                                                                            className="bg-white/95 hover:bg-white shadow-lg"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                router.get(`/marketplace/${product.id}/edit`);
+                                                                            }}
+                                                                            title="Edit listing"
+                                                                        >
+                                                                            <Edit className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button 
+                                                                            size="sm" 
+                                                                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (confirm('Mark this item as sold?')) {
+                                                                                    router.patch(`/marketplace/${product.id}/mark-sold`);
+                                                                                }
+                                                                            }}
+                                                                            title="Mark as sold"
+                                                                        >
+                                                                            <Tag className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {/* Other's Product - Show Favorite and Contact */}
+                                                                        <Button 
+                                                                            size="sm" 
+                                                                            variant="secondary" 
+                                                                            className={`bg-white/95 hover:bg-white ${favorites.includes(product.id) ? 'text-red-500' : ''} shadow-lg`}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                toggleFavorite(product.id);
+                                                                            }}
+                                                                            title="Add to favorites"
+                                                                        >
+                                                                            <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
+                                                                        </Button>
+                                                                        <Button 
+                                                                            size="sm" 
+                                                                            className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                contactSeller(product.id, product.user.id, product.title);
+                                                                            }}
+                                                                            title="Contact seller"
+                                                                        >
+                                                                            <MessageCircle className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                
-                                                {/* Product Info */}
-                                                <div className="p-4">
-                                                    {/* Brand/Style Tag */}
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {product.brand || 'RESTYLE'}
-                                                        </Badge>
-                                                        <div className="flex items-center text-xs text-gray-500">
-                                                            <Eye className="h-3 w-3 mr-1" />
-                                                            {product.views}
+                                                    
+                                                    {/* Product Info */}
+                                                    <div className="p-4">
+                                                        {/* Brand/Style Tag */}
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {product.brand || 'RESTYLE'}
+                                                            </Badge>
+                                                            <div className="flex items-center text-xs text-gray-500">
+                                                                <Eye className="h-3 w-3 mr-1" />
+                                                                {product.views}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    
-                                                    {/* Product Title */}
-                                                    <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-2 line-clamp-2 group-hover:text-green-600 transition-colors">
-                                                        {product.title}
-                                                    </h3>
-                                                    
-                                                    {/* Seller */}
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                        by {product.user.name}
-                                                    </p>
-                                                    
-                                                    {/* Price and Condition */}
-                                                    <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                        {formatPrice(product.price)}
-                                                    </span>
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {product.condition.replace('_', ' ')}
-                                                        </Badge>
-                                                    </div>
-                                                    
-                                                    {/* Size and Color */}
-                                                    {(product.size || product.color) && (
-                                                        <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                            {product.size && <span>Size: {product.size}</span>}
-                                                            {product.color && <span>• Color: {product.color}</span>}
+                                                        
+                                                        {/* Product Title */}
+                                                        <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-2 line-clamp-2 group-hover:text-green-600 transition-colors">
+                                                            {product.title}
+                                                        </h3>
+                                                        
+                                                        {/* Seller */}
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                            by {product.user.name}
+                                                        </p>
+                                                        
+                                                        {/* Price and Condition */}
+                                                        <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                            {formatPrice(product.price)}
+                                                        </span>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {product.condition.replace('_', ' ')}
+                                                            </Badge>
                                                         </div>
-                                                    )}
-                                                    
-                                                    {/* Action Button */}
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            console.log('Navigating to product:', product.id);
-                                                            console.log('Product data:', product);
-                                                            router.get(`/marketplace/${product.id}`, {}, {
-                                                                onStart: () => console.log('Navigation started'),
-                                                                onFinish: () => console.log('Navigation finished'),
-                                                                onError: (errors) => console.log('Navigation error:', errors)
-                                                            });
-                                                        }}
-                                                        className="w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 px-4 rounded text-sm font-medium flex items-center justify-center"
-                                                    >
-                                                        View Details
-                                                        <ArrowRight className="ml-1 h-3 w-3" />
-                                                    </button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
+                                                        
+                                                        {/* Size and Color */}
+                                                        {(product.size || product.color) && (
+                                                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                {product.size && <span>Size: {product.size}</span>}
+                                                                {product.color && <span>• Color: {product.color}</span>}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Action Button */}
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                console.log('Navigating to product:', product.id);
+                                                                console.log('Product data:', product);
+                                                                router.get(`/marketplace/${product.id}`, {}, {
+                                                                    onStart: () => console.log('Navigation started'),
+                                                                    onFinish: () => console.log('Navigation finished'),
+                                                                    onError: (errors) => console.log('Navigation error:', errors)
+                                                                });
+                                                            }}
+                                                            className="w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 px-4 rounded text-sm font-medium flex items-center justify-center"
+                                                        >
+                                                            View Details
+                                                            <ArrowRight className="ml-1 h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                 </div>
                             )}
                         </div>
