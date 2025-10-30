@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthNavigation } from '@/hooks/use-auth-navigation';
 import { 
     Plus, 
@@ -25,7 +25,9 @@ import {
     MapPin,
     RefreshCw,
     Save,
-    Sparkles
+    Sparkles,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -57,8 +59,10 @@ interface WardrobeItem {
     color: string;
     size?: string;
     description?: string;
-    image_path?: string;
-    image_url?: string;
+    image_path?: string | null;
+    image_url?: string | null;
+    images?: string[];
+    image_urls?: string[];
     created_at: string;
     updated_at: string;
 }
@@ -78,8 +82,110 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Image navigation states
+    const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: number]: number }>({});
+
+    // Image navigation functions
+    const getCurrentImage = (item: WardrobeItem): string | undefined => {
+        if (!item) return undefined;
+
+        // Priority 1: Use image_urls array if available (from Laravel model accessor - multiple images)
+        if (item.image_urls && Array.isArray(item.image_urls) && item.image_urls.length > 0) {
+            const index = currentImageIndex[item.id] || 0;
+            const url = item.image_urls[index] || item.image_urls[0];
+            const timestamp = new Date().getTime();
+            if (url) {
+                return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
+            }
+        }
+
+        // Priority 2: Handle images array (for multiple images stored as paths)
+        if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+            const index = currentImageIndex[item.id] || 0;
+            const imagePath = item.images[index] || item.images[0];
+            if (imagePath) {
+                // Ensure path doesn't already include storage/
+                const cleanPath = imagePath.startsWith('storage/') 
+                    ? imagePath.substring(8)
+                    : imagePath.startsWith('/storage/')
+                    ? imagePath.substring(9)
+                    : imagePath;
+                const timestamp = new Date().getTime();
+                return `/storage/${cleanPath}?t=${timestamp}`;
+            }
+        }
+
+        // Priority 3: Use image_url if available (single image from Laravel model accessor)
+        if (item.image_url) {
+            // Add timestamp to prevent caching
+            const timestamp = new Date().getTime();
+            // If image_url is a full URL, use it directly; otherwise treat as relative
+            if (item.image_url.startsWith('http://') || item.image_url.startsWith('https://')) {
+                return `${item.image_url}${item.image_url.includes('?') ? '&' : '?'}t=${timestamp}`;
+            }
+            return `${item.image_url}${item.image_url.includes('?') ? '&' : '?'}t=${timestamp}`;
+        }
+
+        // Priority 4: Handle image_path directly (single image - backward compatibility)
+        if (item.image_path) {
+            // Ensure image_path doesn't already start with storage/
+            const cleanPath = item.image_path.startsWith('storage/') 
+                ? item.image_path.substring(8) // Remove 'storage/' prefix if present
+                : item.image_path.startsWith('/storage/')
+                ? item.image_path.substring(9) // Remove '/storage/' prefix if present
+                : item.image_path;
+            
+            // Add timestamp to prevent caching
+            const timestamp = new Date().getTime();
+            return `/storage/${cleanPath}?t=${timestamp}`;
+        }
+
+        return undefined;
+    };
+
+    // Get total image count for an item
+    const getImageCount = (item: WardrobeItem): number => {
+        // Priority 1: Check for image_urls array (from model accessor - multiple images)
+        if (item.image_urls && Array.isArray(item.image_urls) && item.image_urls.length > 0) {
+            return item.image_urls.length;
+        }
+        
+        // Priority 2: Check for images array (multiple images stored as paths)
+        if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+            return item.images.length;
+        }
+        
+        // Priority 3: Check for single image_url
+        if (item.image_url) {
+            return 1;
+        }
+        
+        // Priority 4: Check for single image_path (backward compatibility)
+        if (item.image_path) {
+            return 1;
+        }
+        
+        return 0;
+    };
+
+    const nextImage = (itemId: number, totalImages: number) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [itemId]: ((prev[itemId] || 0) + 1) % totalImages
+        }));
+    };
+
+    const prevImage = (itemId: number, totalImages: number) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [itemId]: ((prev[itemId] || 0) - 1 + totalImages) % totalImages
+        }));
+    };
+    
     
     // AI Recommender states
     const [weather, setWeather] = useState<any>(null);
@@ -617,6 +723,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         size: '',
         description: '',
         image: null as File | null,
+        images: [] as File[], // For UI preview management
     });
 
     // Filter items based on search and filters
@@ -633,9 +740,22 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     // Handle adding new item
     const handleAddItem = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Prepare submission - if images array has files, clear single image; otherwise clear images array
+        if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+            setData('image', null); // Clear single image when using images array
+        } else if (data.image) {
+            setData('images', []); // Clear images array when using single image
+        }
+        
         post('/wardrobe', {
             onSuccess: () => {
                 reset();
+                setImagePreviews([]); // Clear image previews
+                setIsUploadingImage(false); // Reset upload state
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = ''; // Clear file input
+                }
                 setIsAddItemOpen(false);
                 setSuccessMessage('Wardrobe item added successfully!');
                 setTimeout(() => setSuccessMessage(null), 3000);
@@ -651,7 +771,16 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         setEditingItem(item);
         setEditingId(item.id);
         setIsEditMode(true);
-        setImagePreview(item.image_url || null);
+        
+        // Set image previews for existing images
+        if (item.image_urls && item.image_urls.length > 0) {
+            setImagePreviews(item.image_urls);
+        } else if (item.image_url) {
+            setImagePreviews([item.image_url]);
+        } else {
+            setImagePreviews([]);
+        }
+        
         setData({
             name: item.name,
             brand: item.brand,
@@ -659,7 +788,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
             color: item.color,
             size: item.size || '',
             description: item.description || '',
-            image: null,
+            images: [], // Will be populated when user uploads new images
         });
         setIsAddItemOpen(true);
     };
@@ -677,6 +806,13 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
 
             console.log('Updating item:', editingItem.id, 'with data:', data);
             
+            // Prepare submission - if images array has files, clear single image; otherwise clear images array
+            if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+                setData('image', null); // Clear single image when using images array
+            } else if (data.image) {
+                setData('images', []); // Clear images array when using single image
+            }
+            
             put(`/wardrobe/${editingItem.id}`, {
                 onStart: () => {
                     console.log('Update started');
@@ -691,8 +827,11 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                     setEditingId(null);
                     setIsEditMode(false);
                     setIsAddItemOpen(false);
-                    setImagePreview(null);
+                            setImagePreviews([]);
                     setIsUploadingImage(false);
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = ''; // Clear file input
+                    }
                     setSuccessMessage('Wardrobe item updated successfully! ✨');
                     setTimeout(() => setSuccessMessage(null), 3000);
                 },
@@ -742,26 +881,109 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         setEditingId(null);
         setIsEditMode(false);
         setIsAddItemOpen(false);
-        setImagePreview(null);
+                            setImagePreviews([]);
         setIsUploadingImage(false);
-    };
-
-    // Handle image preview
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setData('image', file);
-            setIsUploadingImage(true);
-            
-            // Create preview URL
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setImagePreview(e.target?.result as string);
-                setIsUploadingImage(false);
-            };
-            reader.readAsDataURL(file);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''; // Clear file input
         }
     };
+
+    // Handle individual image upload
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type - only JPEG and PNG allowed
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload only JPEG or PNG images.');
+                e.target.value = '';
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                alert('File size must be less than 5MB.');
+                e.target.value = '';
+                return;
+            }
+
+            setIsUploadingImage(true);
+
+            // Create preview using URL.createObjectURL for better performance
+            const previewUrl = URL.createObjectURL(file);
+
+            // If index is provided, replace image at that index; otherwise add new image
+            if (typeof index === 'number' && index >= 0) {
+                // Replace existing image at index
+                const newPreviews = [...imagePreviews];
+                const newImages = [...(data.images || [])];
+                
+                // Revoke old object URL if it exists
+                if (newPreviews[index] && newPreviews[index].startsWith('blob:')) {
+                    URL.revokeObjectURL(newPreviews[index]);
+                }
+                
+                newPreviews[index] = previewUrl;
+                newImages[index] = file;
+                
+                setImagePreviews(newPreviews);
+                setData('images', newImages);
+                
+                // For single image upload to backend, use the first image
+                if (newImages.length > 0) {
+                    setData('image', newImages[0]);
+                }
+            } else {
+                // Add new image
+                // Update form data with the file (backend expects 'image' singular)
+                // Always use the first image for the backend 'image' field
+                setData('image', file);
+                
+                // Also store in images array for preview management
+                const newImages = [...(data.images || []), file];
+                setData('images', newImages);
+                
+                // Update preview
+                setImagePreviews(prev => [...prev, previewUrl]);
+            }
+            
+            setIsUploadingImage(false);
+        }
+    };
+
+    // Remove image at specific index
+    const removeImage = (index: number) => {
+        // Revoke object URL before removing
+        if (imagePreviews[index] && imagePreviews[index].startsWith('blob:')) {
+            URL.revokeObjectURL(imagePreviews[index]);
+        }
+        
+        const newPreviews = imagePreviews.filter((_, i) => i !== index);
+        const newImages = (data.images || []).filter((_, i) => i !== index);
+        setImagePreviews(newPreviews);
+        setData('images', newImages);
+        
+        // Update the main image field to point to first remaining image
+        if (newImages.length > 0) {
+            setData('image', newImages[0]);
+        } else {
+            setData('image', null);
+        }
+    };
+
+    // Add new image slot
+    const addImageSlot = () => {
+        if (data.images.length < 5) {
+            // Trigger file input for new image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.jpg,.jpeg,.png,image/jpeg,image/png';
+            input.onchange = (e) => handleImageChange(e as any);
+            input.click();
+        }
+    };
+
 
     const getColorBadgeVariant = (color: string) => {
         const colorMap: { [key: string]: string } = {
@@ -783,8 +1005,8 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Wardrobe" />
             
-            <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/30 dark:to-green-800/20">
-                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+            <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/50 dark:via-emerald-950/30 dark:to-teal-950/50">
+                <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4 sm:p-6">
                 
                         {/* Success/Error Message */}
                         {successMessage && (
@@ -812,76 +1034,51 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             </div>
                         )}
 
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                {/* Header Bar */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
                         <Link 
                             href={dashboard()}
-                            className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            <span>Back to Dashboard</span>
+                            <span className="hidden sm:inline">Back</span>
                         </Link>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsPreferencesOpen(true)}
-                                className="flex items-center space-x-2"
-                            >
-                                <Sparkles className="h-4 w-4" />
-                                <span>Style Preferences</span>
-                            </Button>
-                            <div className="flex items-center space-x-2">
-                                <Label className="text-sm text-gray-600 dark:text-gray-400">Show:</Label>
-                                <Select value={maxRecommendations.toString()} onValueChange={(value) => setMaxRecommendations(parseInt(value))}>
-                                    <SelectTrigger className="w-20 h-8">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="3">3</SelectItem>
-                                        <SelectItem value="6">6</SelectItem>
-                                        <SelectItem value="9">9</SelectItem>
-                                        <SelectItem value="12">12</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <span className="text-sm text-gray-600 dark:text-gray-400">items</span>
-                            </div>
-                        </div>
+                        <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                            <Shirt className="h-6 w-6 sm:h-7 sm:w-7 text-green-600 dark:text-green-400" />
+                            <span>My Wardrobe</span>
+                        </h1>
                     </div>
-                    <div className="text-center">
-                        <div className="mx-auto w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                            <Shirt className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                        </div>
-                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsPreferencesOpen(true)}
+                        className="hidden sm:flex items-center space-x-2 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/20"
+                    >
+                        <Sparkles className="h-4 w-4" />
+                        <span>Preferences</span>
+                    </Button>
                 </div>
 
-                {/* Page Title */}
-                <div className="text-center space-y-4">
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white">My Wardrobe</h1>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-                        Organize your sustainable fashion collection. Add, edit, and manage your clothing items.
-                    </p>
-                </div>
-
-                {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="border-gray-200 dark:border-gray-700">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{wardrobeItems.length}</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Total Items</div>
+                {/* Quick Stats */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+                    <Card className="border-green-200 dark:border-green-800 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                        <CardContent className="p-3 sm:p-4 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{wardrobeItems.length}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Items</div>
                         </CardContent>
                     </Card>
-                    <Card className="border-gray-200 dark:border-gray-700">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{categories.length}</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Categories</div>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                        <CardContent className="p-3 sm:p-4 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{categories.length}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Categories</div>
                         </CardContent>
                     </Card>
-                    <Card className="border-gray-200 dark:border-gray-700">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{filteredItems.length}</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Filtered Items</div>
+                    <Card className="border-green-200 dark:border-green-800 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                        <CardContent className="p-3 sm:p-4 text-center">
+                            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{filteredItems.length}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Filtered</div>
                         </CardContent>
                     </Card>
                 </div>
@@ -892,7 +1089,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                 <Card className="border-gray-200 dark:border-gray-700">
                     <CardHeader>
                                     <CardTitle className="text-xl flex items-center space-x-2">
-                                        <Plus className="h-5 w-5 text-purple-600" />
+                                        <Plus className="h-5 w-5 text-green-600" />
                                         <span>Add New Item</span>
                                     </CardTitle>
                                     <CardDescription>Create and manage your wardrobe items</CardDescription>
@@ -900,22 +1097,22 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                     <CardContent className="space-y-4">
                             <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
                                 <DialogTrigger asChild>
-                                            <Button className="bg-purple-600 hover:bg-purple-700 text-white w-full">
+                                            <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
                                         <Plus className="mr-2 h-4 w-4" />
                                                 Add New Wardrobe Item
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px] animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                                <DialogContent className="sm:max-w-[600px] animate-in fade-in-0 zoom-in-95 duration-200 max-h-[95vh] overflow-hidden">
                                     <DialogHeader>
                                         <DialogTitle className="flex items-center space-x-2">
                                             {isEditMode ? (
                                                 <>
-                                                    <Edit3 className="h-5 w-5 text-purple-600" />
+                                                    <Edit3 className="h-5 w-5 text-green-600" />
                                                     <span>Edit Wardrobe Item</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Plus className="h-5 w-5 text-purple-600" />
+                                                    <Plus className="h-5 w-5 text-green-600" />
                                                     <span>Add New Wardrobe Item</span>
                                                 </>
                                             )}
@@ -927,123 +1124,213 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                             }
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <div className="max-h-[80vh] overflow-y-auto">
+                                    <div className="overflow-y-auto max-h-[75vh] pr-2">
                                     <form onSubmit={editingItem ? handleUpdateItem : handleAddItem}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-name">Item Name *</Label>
-                                                <Input
-                                                    id="item-name"
-                                                    placeholder="e.g., Blue Cotton T-shirt"
-                                                    value={data.name}
-                                                    onChange={(e) => setData('name', e.target.value)}
-                                                    maxLength={100}
-                                                    required
-                                                    className={errors.name ? 'border-red-500' : ''}
-                                                />
-                                                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-                                                <p className="text-xs text-gray-500">{data.name.length}/100 characters</p>
+                                        <div className="space-y-6 py-4">
+                                            {/* Row 1: Item Name and Brand */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-name">Item Name *</Label>
+                                                    <Input
+                                                        id="item-name"
+                                                        placeholder="e.g., Blue Cotton T-shirt"
+                                                        value={data.name}
+                                                        onChange={(e) => setData('name', e.target.value)}
+                                                        maxLength={100}
+                                                        required
+                                                        className={errors.name ? 'border-red-500' : ''}
+                                                    />
+                                                    {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                                                    <p className="text-xs text-gray-500">{data.name.length}/100 characters</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-brand">Brand *</Label>
+                                                    <Input
+                                                        id="item-brand"
+                                                        placeholder="e.g., Nike, Zara, H&M"
+                                                        value={data.brand}
+                                                        onChange={(e) => setData('brand', e.target.value)}
+                                                        maxLength={50}
+                                                        required
+                                                        className={errors.brand ? 'border-red-500' : ''}
+                                                    />
+                                                    {errors.brand && <p className="text-red-500 text-sm">{errors.brand}</p>}
+                                                    <p className="text-xs text-gray-500">{data.brand.length}/50 characters</p>
+                                                </div>
                                             </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-brand">Brand *</Label>
-                                                <Input
-                                                    id="item-brand"
-                                                    placeholder="e.g., Nike, Zara, H&M"
-                                                    value={data.brand}
-                                                    onChange={(e) => setData('brand', e.target.value)}
-                                                    maxLength={50}
-                                                    required
-                                                    className={errors.brand ? 'border-red-500' : ''}
-                                                />
-                                                {errors.brand && <p className="text-red-500 text-sm">{errors.brand}</p>}
-                                                <p className="text-xs text-gray-500">{data.brand.length}/50 characters</p>
+
+                                            {/* Row 2: Category, Color, and Size */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-category">Category *</Label>
+                                                    <Select value={data.category} onValueChange={(value) => setData('category', value)}>
+                                                        <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
+                                                            <SelectValue placeholder="Select category" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {categories.map((category) => (
+                                                                <SelectItem key={category} value={category}>
+                                                                    {category}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-color">Color *</Label>
+                                                    <Select value={data.color} onValueChange={(value) => setData('color', value)}>
+                                                        <SelectTrigger className={errors.color ? 'border-red-500' : ''}>
+                                                            <SelectValue placeholder="Select color" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {colors.map((color) => (
+                                                                <SelectItem key={color} value={color}>
+                                                                    {color}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.color && <p className="text-red-500 text-sm">{errors.color}</p>}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-size">Size *</Label>
+                                                    <Select value={data.size} onValueChange={(value) => setData('size', value)}>
+                                                        <SelectTrigger className={errors.size ? 'border-red-500' : ''}>
+                                                            <SelectValue placeholder="Select size" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {sizes.map((size) => (
+                                                                <SelectItem key={size} value={size}>
+                                                                    {size}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.size && <p className="text-red-500 text-sm">{errors.size}</p>}
+                                                </div>
                                             </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-category">Category *</Label>
-                                                <Select value={data.category} onValueChange={(value) => setData('category', value)}>
-                                                    <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
-                                                        <SelectValue placeholder="Select category" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {categories.map((category) => (
-                                                            <SelectItem key={category} value={category}>
-                                                                {category}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-color">Color *</Label>
-                                                <Select value={data.color} onValueChange={(value) => setData('color', value)}>
-                                                    <SelectTrigger className={errors.color ? 'border-red-500' : ''}>
-                                                        <SelectValue placeholder="Select color" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {colors.map((color) => (
-                                                            <SelectItem key={color} value={color}>
-                                                                {color}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                {errors.color && <p className="text-red-500 text-sm">{errors.color}</p>}
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-size">Size *</Label>
-                                                <Select value={data.size} onValueChange={(value) => setData('size', value)}>
-                                                    <SelectTrigger className={errors.size ? 'border-red-500' : ''}>
-                                                        <SelectValue placeholder="Select size" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {sizes.map((size) => (
-                                                            <SelectItem key={size} value={size}>
-                                                                {size}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                {errors.size && <p className="text-red-500 text-sm">{errors.size}</p>}
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-description">Style Notes</Label>
-                                                <Textarea
-                                                    id="item-description"
-                                                    placeholder="Any additional notes about this item..."
-                                                    value={data.description}
-                                                    onChange={(e) => setData('description', e.target.value)}
-                                                    maxLength={200}
-                                                    rows={3}
-                                                />
-                                                {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="item-image">Image</Label>
-                                                <Input
-                                                    id="item-image"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleImageChange}
-                                                    disabled={isUploadingImage}
-                                                />
-                                                {isUploadingImage && (
-                                                    <div className="flex items-center space-x-2 text-sm text-blue-600">
-                                                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                        <span>Processing image...</span>
+
+                                            {/* Row 3: Description and Image */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-description">Style Notes</Label>
+                                                    <Textarea
+                                                        id="item-description"
+                                                        placeholder="Any additional notes about this item..."
+                                                        value={data.description}
+                                                        onChange={(e) => setData('description', e.target.value)}
+                                                        maxLength={200}
+                                                        rows={4}
+                                                        className="resize-none"
+                                                    />
+                                                    {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+                                                    <p className="text-xs text-gray-500">{data.description.length}/200 characters</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="item-image">Images *</Label>
+                                                    <div className="space-y-3">
+                                                        {/* Initial upload button */}
+                                                        {imagePreviews.length === 0 && (
+                                                            <div className="space-y-3">
+                                                                <Input
+                                                                    ref={fileInputRef}
+                                                                    id="item-image"
+                                                                    type="file"
+                                                                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                                                                    onChange={(e) => handleImageChange(e)}
+                                                                    disabled={isUploadingImage}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                                    <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                                                                        <p className="font-medium">Upload images from your device</p>
+                                                                        <p className="text-blue-600 dark:text-blue-300">Accepted formats: JPEG, PNG only</p>
+                                                                        <p className="text-blue-600 dark:text-blue-300">File size: Maximum 5MB per image</p>
+                                                                        <p className="text-blue-600 dark:text-blue-300">Maximum: 5 images per item</p>
+                                                                        <p className="text-blue-500 dark:text-blue-400">Recommended: 500x500px or larger</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Image previews with individual controls */}
+                                                        {imagePreviews.length > 0 && (
+                                                            <div className="space-y-3">
+                                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                                    {imagePreviews.map((preview, index) => (
+                                                                        <div key={index} className="relative group">
+                                                                            <div className="relative">
+                                                                                <img 
+                                                                                    src={preview} 
+                                                                                    alt={`Preview ${index + 1}`} 
+                                                                                    className="w-full h-24 object-cover rounded-lg border-2 border-green-500"
+                                                                                />
+                                                                                {/* Remove button */}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeImage(index)}
+                                                                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                >
+                                                                                    <X className="h-3 w-3" />
+                                                                                </button>
+                                                                                {/* Replace button */}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const input = document.createElement('input');
+                                                                                        input.type = 'file';
+                                                                                        input.accept = '.jpg,.jpeg,.png,image/jpeg,image/png';
+                                                                                        input.onchange = (e) => handleImageChange(e as any, index);
+                                                                                        input.click();
+                                                                                    }}
+                                                                                    className="absolute bottom-1 right-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                >
+                                                                                    <Edit3 className="h-3 w-3" />
+                                                                                </button>
+                                                                                {/* Image number */}
+                                                                                <div className="absolute top-1 left-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                                                    {index + 1}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    
+                                                                    {/* Add more button */}
+                                                                    {imagePreviews.length < 5 && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={addImageSlot}
+                                                                            disabled={isUploadingImage}
+                                                                            className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                                                                        >
+                                                                            <Plus className="h-6 w-6 text-gray-400 group-hover:text-blue-500" />
+                                                                            <span className="text-xs text-gray-500 group-hover:text-blue-600 mt-1">Add Image</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center justify-between text-sm">
+                                                                    <p className="text-green-600 dark:text-green-400 font-medium">
+                                                                        ✓ {imagePreviews.length} image{imagePreviews.length > 1 ? 's' : ''} ready
+                                                                    </p>
+                                                                    <p className="text-gray-500">
+                                                                        {imagePreviews.length}/5 images
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {isUploadingImage && (
+                                                            <div className="flex items-center space-x-2 text-sm text-blue-600">
+                                                                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                <span>Processing image...</span>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {errors.images && <p className="text-red-500 text-sm">{errors.images}</p>}
                                                     </div>
-                                                )}
-                                                {imagePreview && (
-                                                    <div className="mt-2">
-                                                        <img 
-                                                            src={imagePreview} 
-                                                            alt="Preview" 
-                                                            className="w-20 h-20 object-cover rounded-lg border"
-                                                        />
-                                                        <p className="text-xs text-gray-500 mt-1">Image preview</p>
-                                                    </div>
-                                                )}
-                                                {errors.image && <p className="text-red-500 text-sm">{errors.image}</p>}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex justify-end space-x-2">
@@ -1058,7 +1345,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                             <Button 
                                                 type="submit" 
                                                 disabled={processing || isUploadingImage}
-                                                className="bg-purple-600 hover:bg-purple-700 transition-all duration-200"
+                                                className="bg-green-600 hover:bg-green-700 transition-all duration-200"
                                             >
                                                 {processing ? (
                                                     <div className="flex items-center space-x-2">
@@ -1079,6 +1366,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     </div>
                                 </DialogContent>
                             </Dialog>
+
                                 </CardContent>
                             </Card>
 
@@ -1086,7 +1374,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             <Card className="border-gray-200 dark:border-gray-700">
                                 <CardHeader>
                                     <CardTitle className="text-xl flex items-center space-x-2">
-                                        <Search className="h-5 w-5 text-blue-600" />
+                                        <Search className="h-5 w-5 text-green-600" />
                                         <span>Search & Filter</span>
                                     </CardTitle>
                                     <CardDescription>Find and organize your wardrobe items</CardDescription>
@@ -1101,8 +1389,8 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
                                         id="search"
-                                                placeholder="Search by name, brand, or style notes..."
-                                        className="pl-10"
+                                        placeholder="Search by name, brand, or style notes..."
+                                        className="pl-10 border-green-200 dark:border-green-800 focus:border-green-500 focus:ring-green-500"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         maxLength={50}
@@ -1116,7 +1404,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     Category
                                 </Label>
                                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="border-green-200 dark:border-green-800">
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1136,7 +1424,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     Color
                                 </Label>
                                 <Select value={selectedColor} onValueChange={setSelectedColor}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="border-green-200 dark:border-green-800">
                                         <SelectValue placeholder="Select color" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1368,13 +1656,38 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                                     onClick={() => toggleItemSelection(item.id)}
                                                                 >
                                                                     <div className="relative">
-                                                                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                                                            {item.image_url ? (
-                                                                                <img 
-                                                                                    src={item.image_url} 
-                                                                                    alt={item.name}
-                                                                                    className="w-full h-full object-cover rounded-lg"
-                                                                                />
+                                                                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center relative group">
+                                                                            {getCurrentImage(item) ? (
+                                                                                <>
+                                                                                    <img 
+                                                                                        src={getCurrentImage(item) || ''} 
+                                                                                        alt={item.name}
+                                                                                        className="w-full h-full object-cover rounded-lg"
+                                                                                    />
+                                                                                    {/* Small navigation arrows for multiple images */}
+                                                                                    {getImageCount(item) > 1 && (
+                                                                                        <>
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    prevImage(item.id, getImageCount(item));
+                                                                                                }}
+                                                                                                className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                            >
+                                                                                                <ChevronLeft className="h-2 w-2" />
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    nextImage(item.id, getImageCount(item));
+                                                                                                }}
+                                                                                                className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                            >
+                                                                                                <ChevronRight className="h-2 w-2" />
+                                                                                            </button>
+                                                                                        </>
+                                                                                    )}
+                                                                                </>
                                                                             ) : (
                                                                                 <Shirt className="h-6 w-6 text-gray-400" />
                                                                             )}
@@ -1699,13 +2012,38 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                             const item = wardrobeItems.find(w => w.id === itemId);
                                                             return item ? (
                                                                 <div key={index} className="relative">
-                                                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-white dark:border-gray-700 flex items-center justify-center overflow-hidden">
-                                                                        {item.image_url ? (
-                                                                            <img 
-                                                                                src={item.image_url} 
-                                                                                alt={item.name}
-                                                                                className="w-full h-full object-cover"
-                                                                            />
+                                                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-white dark:border-gray-700 flex items-center justify-center overflow-hidden relative group">
+                                                                        {getCurrentImage(item) ? (
+                                                                            <>
+                                                                                <img 
+                                                                                    src={getCurrentImage(item) || ''} 
+                                                                                    alt={item.name}
+                                                                                    className="w-full h-full object-cover"
+                                                                                />
+                                                                                {/* Small navigation arrows for multiple images */}
+                                                                                {getImageCount(item) > 1 && (
+                                                                                    <>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                prevImage(item.id, getImageCount(item));
+                                                                                            }}
+                                                                                            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                        >
+                                                                                            <ChevronLeft className="h-2 w-2" />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                nextImage(item.id, getImageCount(item));
+                                                                                            }}
+                                                                                            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                        >
+                                                                                            <ChevronRight className="h-2 w-2" />
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </>
                                                                         ) : (
                                                                             <Shirt className="h-6 w-6 text-gray-400" />
                                                                         )}
@@ -1814,7 +2152,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     }
                                 </p>
                                 <Button 
-                                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                                                className="bg-green-600 hover:bg-green-700 text-white"
                                     onClick={() => setIsAddItemOpen(true)}
                                 >
                                     <Plus className="mr-2 h-4 w-4" />
@@ -1868,14 +2206,72 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
-                                        {/* Item Image */}
-                                        <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-                                            {item.image_url ? (
-                                                <img 
-                                                    src={item.image_url} 
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                        {/* Item Image with Navigation */}
+                                        <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden relative group">
+                                            {getCurrentImage(item) ? (
+                                                <>
+                                                    <img 
+                                                        src={getCurrentImage(item) || ''} 
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    {getImageCount(item) > 1 && (
+                                                        <>
+                                                            {/* Navigation Controls - Always Visible Arrows */}
+                                                            <div className="absolute inset-0 flex items-center justify-between px-3 z-10 pointer-events-none">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        prevImage(item.id, getImageCount(item));
+                                                                    }}
+                                                                    className="bg-black/80 hover:bg-black text-white rounded-full p-3 transform hover:scale-125 transition-all shadow-xl backdrop-blur-md pointer-events-auto border-2 border-white/20 hover:border-white/40"
+                                                                    aria-label="Previous image"
+                                                                >
+                                                                    <ChevronLeft className="h-6 w-6" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        nextImage(item.id, getImageCount(item));
+                                                                    }}
+                                                                    className="bg-black/80 hover:bg-black text-white rounded-full p-3 transform hover:scale-125 transition-all shadow-xl backdrop-blur-md pointer-events-auto border-2 border-white/20 hover:border-white/40"
+                                                                    aria-label="Next image"
+                                                                >
+                                                                    <ChevronRight className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                            
+                                                            {/* Bottom Bar with Dots Indicator */}
+                                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-4 z-10">
+                                                                {/* Dots Indicator - Always Visible */}
+                                                                <div className="flex justify-center items-center gap-2 mb-2">
+                                                                    {Array.from({ length: getImageCount(item) }).map((_, index) => (
+                                                                        <button
+                                                                            key={index}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setCurrentImageIndex(prev => ({
+                                                                                    ...prev,
+                                                                                    [item.id]: index
+                                                                                }));
+                                                                            }}
+                                                                            className={`rounded-full transition-all ${
+                                                                                (currentImageIndex[item.id] || 0) === index 
+                                                                                    ? 'bg-white w-3 h-3 scale-125 shadow-lg ring-2 ring-white/50' 
+                                                                                    : 'bg-white/70 hover:bg-white/90 w-2.5 h-2.5 hover:scale-110'
+                                                                            }`}
+                                                                            aria-label={`Go to image ${index + 1}`}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                                {/* Counter Text */}
+                                                                <div className="text-white text-xs text-center font-semibold">
+                                                                    Image {(currentImageIndex[item.id] || 0) + 1} of {getImageCount(item)}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <Shirt className="h-12 w-12 text-gray-400" />
                                             )}
@@ -1916,7 +2312,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
-                                                        className="flex-1 transition-all duration-200 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700"
+                                                        className="flex-1 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:text-green-700"
                                                 onClick={() => handleEditItem(item)}
                                             >
                                                 <Edit3 className="mr-2 h-4 w-4" />
@@ -1939,8 +2335,280 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                     )}
                             </CardContent>
                         </Card>
+                    </div>
                 </div>
-            </div>
+
+                {/* Floating Add Item Button */}
+                <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl hover:shadow-2xl transition-all duration-200 z-40 flex items-center justify-center group hover:scale-110" aria-label="Add new wardrobe item">
+                            <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform duration-200" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] animate-in fade-in-0 zoom-in-95 duration-200 max-h-[95vh] overflow-hidden">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center space-x-2">
+                                {isEditMode ? (
+                                    <>
+                                        <Edit3 className="h-5 w-5 text-green-600" />
+                                        <span>Edit Wardrobe Item</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-5 w-5 text-green-600" />
+                                        <span>Add New Wardrobe Item</span>
+                                    </>
+                                )}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {isEditMode 
+                                    ? `Update your "${editingItem?.name}" item details.` 
+                                    : 'Add a new item to your wardrobe collection.'
+                                }
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="overflow-y-auto max-h-[75vh] pr-2">
+                            <form onSubmit={editingItem ? handleUpdateItem : handleAddItem}>
+                                <div className="space-y-6 py-4">
+                                    {/* Row 1: Item Name and Brand */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-name">Item Name *</Label>
+                                            <Input
+                                                id="item-name"
+                                                placeholder="e.g., Blue Cotton T-shirt"
+                                                value={data.name}
+                                                onChange={(e) => setData('name', e.target.value)}
+                                                maxLength={100}
+                                                required
+                                                className={errors.name ? 'border-red-500' : ''}
+                                            />
+                                            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                                            <p className="text-xs text-gray-500">{data.name.length}/100 characters</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-brand">Brand *</Label>
+                                            <Input
+                                                id="item-brand"
+                                                placeholder="e.g., Nike, Zara, H&M"
+                                                value={data.brand}
+                                                onChange={(e) => setData('brand', e.target.value)}
+                                                maxLength={50}
+                                                required
+                                                className={errors.brand ? 'border-red-500' : ''}
+                                            />
+                                            {errors.brand && <p className="text-red-500 text-sm">{errors.brand}</p>}
+                                            <p className="text-xs text-gray-500">{data.brand.length}/50 characters</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Row 2: Category, Color, and Size */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-category">Category *</Label>
+                                            <Select value={data.category} onValueChange={(value) => setData('category', value)}>
+                                                <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories.map((category) => (
+                                                        <SelectItem key={category} value={category}>
+                                                            {category}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-color">Color *</Label>
+                                            <Select value={data.color} onValueChange={(value) => setData('color', value)}>
+                                                <SelectTrigger className={errors.color ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder="Select color" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {colors.map((color) => (
+                                                        <SelectItem key={color} value={color}>
+                                                            {color}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.color && <p className="text-red-500 text-sm">{errors.color}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-size">Size *</Label>
+                                            <Select value={data.size} onValueChange={(value) => setData('size', value)}>
+                                                <SelectTrigger className={errors.size ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder="Select size" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {sizes.map((size) => (
+                                                        <SelectItem key={size} value={size}>
+                                                            {size}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.size && <p className="text-red-500 text-sm">{errors.size}</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Row 3: Description and Image */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-description">Style Notes</Label>
+                                            <Textarea
+                                                id="item-description"
+                                                placeholder="Any additional notes about this item..."
+                                                value={data.description}
+                                                onChange={(e) => setData('description', e.target.value)}
+                                                maxLength={200}
+                                                rows={4}
+                                                className="resize-none"
+                                            />
+                                            {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+                                            <p className="text-xs text-gray-500">{data.description.length}/200 characters</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="item-image">Images *</Label>
+                                            <div className="space-y-3">
+                                                {/* Initial upload button */}
+                                                {imagePreviews.length === 0 && (
+                                                    <div className="space-y-3">
+                                                        <Input
+                                                            ref={fileInputRef}
+                                                            id="item-image"
+                                                            type="file"
+                                                            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                                                            onChange={(e) => handleImageChange(e)}
+                                                            disabled={isUploadingImage}
+                                                            className="cursor-pointer"
+                                                        />
+                                                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                                            <div className="text-xs text-green-800 dark:text-green-200 space-y-1">
+                                                                <p className="font-medium">Upload images from your device</p>
+                                                                <p className="text-green-600 dark:text-green-300">Accepted formats: JPEG, PNG only</p>
+                                                                <p className="text-green-600 dark:text-green-300">File size: Maximum 5MB per image</p>
+                                                                <p className="text-green-600 dark:text-green-300">Maximum: 5 images per item</p>
+                                                                <p className="text-green-500 dark:text-green-400">Recommended: 500x500px or larger</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Image previews with individual controls */}
+                                                {imagePreviews.length > 0 && (
+                                                    <div className="space-y-3">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                            {imagePreviews.map((preview, index) => (
+                                                                <div key={index} className="relative group">
+                                                                    <div className="relative">
+                                                                        <img 
+                                                                            src={preview} 
+                                                                            alt={`Preview ${index + 1}`} 
+                                                                            className="w-full h-24 object-cover rounded-lg border-2 border-green-500"
+                                                                        />
+                                                                        {/* Remove button */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeImage(index)}
+                                                                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <X className="h-3 w-3" />
+                                                                        </button>
+                                                                        {/* Replace button */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const input = document.createElement('input');
+                                                                                input.type = 'file';
+                                                                                input.accept = '.jpg,.jpeg,.png,image/jpeg,image/png';
+                                                                                input.onchange = (e) => handleImageChange(e as any, index);
+                                                                                input.click();
+                                                                            }}
+                                                                            className="absolute bottom-1 right-1 bg-green-500 hover:bg-green-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <Edit3 className="h-3 w-3" />
+                                                                        </button>
+                                                                        {/* Image number */}
+                                                                        <div className="absolute top-1 left-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                                            {index + 1}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            
+                                                            {/* Add more button */}
+                                                            {imagePreviews.length < 5 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={addImageSlot}
+                                                                    disabled={isUploadingImage}
+                                                                    className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group"
+                                                                >
+                                                                    <Plus className="h-6 w-6 text-gray-400 group-hover:text-green-500" />
+                                                                    <span className="text-xs text-gray-500 group-hover:text-green-600 mt-1">Add Image</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <p className="text-green-600 dark:text-green-400 font-medium">
+                                                                ✓ {imagePreviews.length} image{imagePreviews.length > 1 ? 's' : ''} ready
+                                                            </p>
+                                                            <p className="text-gray-500">
+                                                                {imagePreviews.length}/5 images
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {isUploadingImage && (
+                                                    <div className="flex items-center space-x-2 text-sm text-green-600">
+                                                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                                        <span>Processing image...</span>
+                                                    </div>
+                                                )}
+                                                
+                                                {errors.images && <p className="text-red-500 text-sm">{errors.images}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        onClick={handleCancelEdit}
+                                        disabled={processing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        type="submit" 
+                                        disabled={processing || isUploadingImage}
+                                        className="bg-green-600 hover:bg-green-700 transition-all duration-200"
+                                    >
+                                        {processing ? (
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                <span>
+                                                    {data.image ? 'Uploading image...' : (isEditMode ? 'Updating...' : 'Adding...')}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center space-x-2">
+                                                {isEditMode ? <Edit3 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                                                <span>{isEditMode ? 'Update Item' : 'Add Item'}</span>
+                                            </div>
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
             {/* Save Outfit Dialog */}
             <Dialog open={isSaveOutfitOpen} onOpenChange={setIsSaveOutfitOpen}>
@@ -1961,13 +2629,38 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             <div className="mt-2 space-y-2">
                                 {selectedOutfitItems.map((item, index) => (
                                     <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                            {item.image_url ? (
-                                                <img 
-                                                    src={item.image_url} 
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
+                                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative group">
+                                            {getCurrentImage(item) ? (
+                                                <>
+                                                    <img 
+                                                        src={getCurrentImage(item) || ''} 
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover rounded-lg"
+                                                    />
+                                                    {/* Small navigation arrows for multiple images */}
+                                                    {getImageCount(item) > 1 && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    prevImage(item.id, getImageCount(item));
+                                                                }}
+                                                                className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <ChevronLeft className="h-2 w-2" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    nextImage(item.id, getImageCount(item));
+                                                                }}
+                                                                className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <ChevronRight className="h-2 w-2" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <Shirt className="h-5 w-5 text-gray-400" />
                                             )}

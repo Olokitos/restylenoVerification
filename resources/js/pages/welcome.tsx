@@ -41,7 +41,8 @@ export default function Welcome() {
                             
                             {/* Subheading */}
                             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300 sm:text-xl lg:text-2xl max-w-2xl mx-auto">
-                                Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo.
+                                Transform your wardrobe, reduce waste, and discover sustainable fashion. 
+                                Join our community in making fashion more sustainable.
                             </p>
                             
                             {/* Action Buttons */}

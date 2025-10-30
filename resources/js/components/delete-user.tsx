@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Form } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export default function DeleteUser() {
     const passwordInput = useRef<HTMLInputElement>(null);
+    const [isConfirmed, setIsConfirmed] = useState(false);
 
     return (
         <div className="space-y-6">
@@ -64,33 +66,56 @@ export default function DeleteUser() {
                         >
                             {({ resetAndClearErrors, processing, errors }) => (
                                 <>
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor="password"
-                                            className="sr-only"
-                                        >
-                                            Password
-                                        </Label>
+                                    <div className="grid gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="password">
+                                                Password
+                                            </Label>
 
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            name="password"
-                                            ref={passwordInput}
-                                            placeholder="Password"
-                                            autoComplete="current-password"
-                                        />
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                name="password"
+                                                ref={passwordInput}
+                                                placeholder="Enter your password"
+                                                autoComplete="current-password"
+                                                required
+                                            />
 
-                                        <InputError message={errors.password} />
+                                            <InputError message={errors.password} />
+                                        </div>
+
+                                        <div className="flex items-start space-x-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+                                            <Checkbox
+                                                id="confirmation"
+                                                name="confirmation"
+                                                checked={isConfirmed}
+                                                onCheckedChange={(checked) => setIsConfirmed(checked === true)}
+                                                className="mt-0.5"
+                                            />
+                                            <div className="flex-1">
+                                                <Label
+                                                    htmlFor="confirmation"
+                                                    className="text-sm font-medium text-red-900 dark:text-red-100 cursor-pointer"
+                                                >
+                                                    I understand this action cannot be undone
+                                                </Label>
+                                                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                                    All your data, including wardrobe items, marketplace listings, and messages will be permanently deleted.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <InputError message={errors.confirmation} />
                                     </div>
 
                                     <DialogFooter className="gap-2">
                                         <DialogClose asChild>
                                             <Button
                                                 variant="secondary"
-                                                onClick={() =>
-                                                    resetAndClearErrors()
-                                                }
+                                                onClick={() => {
+                                                    resetAndClearErrors();
+                                                    setIsConfirmed(false);
+                                                }}
                                             >
                                                 Cancel
                                             </Button>
@@ -98,15 +123,11 @@ export default function DeleteUser() {
 
                                         <Button
                                             variant="destructive"
-                                            disabled={processing}
-                                            asChild
+                                            disabled={processing || !isConfirmed}
+                                            type="submit"
+                                            data-test="confirm-delete-user-button"
                                         >
-                                            <button
-                                                type="submit"
-                                                data-test="confirm-delete-user-button"
-                                            >
-                                                Delete account
-                                            </button>
+                                            {processing ? 'Deleting...' : 'Delete Account'}
                                         </Button>
                                     </DialogFooter>
                                 </>

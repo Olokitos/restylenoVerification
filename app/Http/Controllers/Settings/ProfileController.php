@@ -4,16 +4,24 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\ProfilePictureService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    protected ProfilePictureService $profilePictureService;
+
+    public function __construct(ProfilePictureService $profilePictureService)
+    {
+        $this->profilePictureService = $profilePictureService;
+    }
+
     /**
      * Show the user's profile settings page.
      */
@@ -33,16 +41,23 @@ class ProfileController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        // Handle profile picture upload
+        // Handle profile picture upload with optimization
         if ($request->hasFile('profile_picture')) {
-            // Delete old profile picture if exists
-            if ($user->profile_picture) {
-                Storage::disk('public')->delete($user->profile_picture);
+            try {
+                $path = $this->profilePictureService->uploadProfilePicture(
+                    $request->file('profile_picture'),
+                    $user->id,
+                    $user->profile_picture
+                );
+                
+                $validated['profile_picture'] = $path;
+            } catch (\Exception $e) {
+                Log::error('Profile picture upload failed: ' . $e->getMessage());
+                
+                return back()->withErrors([
+                    'profile_picture' => $e->getMessage()
+                ])->withInput();
             }
-
-            // Store new profile picture
-            $path = $request->file('profile_picture')->store('profile-pictures', 'public');
-            $validated['profile_picture'] = $path;
         }
 
         $user->fill($validated);
@@ -53,7 +68,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return to_route('settings.profile.edit');
+        return to_route('settings.profile.edit')->with('status', 'profile-updated');
     }
 
     /**

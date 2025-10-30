@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { formatPrice } from '@/utils/price';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { 
     Search, 
@@ -17,7 +17,11 @@ import {
     Grid,
     List,
     SortAsc,
-    MessageCircle
+    MessageCircle,
+    ChevronLeft,
+    ChevronRight,
+    Edit,
+    Tag
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -84,6 +88,8 @@ interface MarketplacePageProps {
         min_price?: string;
         max_price?: string;
         condition?: string;
+        size?: string;
+        color?: string;
     };
 }
 
@@ -93,9 +99,18 @@ export default function MarketplaceIndex({
     featuredProducts, 
     filters 
 }: MarketplacePageProps) {
+    const { auth } = usePage().props as { auth: { user: { id: number; name: string } } };
     const [favorites, setFavorites] = useState<number[]>([]);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [sortBy, setSortBy] = useState('recommended');
+    const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: number]: number }>({});
+    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+    const [selectedColor, setSelectedColor] = useState<string>(filters?.color || '');
+
+    // Check if current user is the seller
+    const isOwnProduct = (product: Product) => {
+        return auth?.user && product.user.id === auth.user.id;
+    };
 
     // Handle search functionality
     const handleSearch = (searchTerm: string) => {
@@ -105,7 +120,33 @@ export default function MarketplaceIndex({
     // Handle filter changes
     const handleFilterChange = (filterType: string, value: string) => {
         const newFilters = { ...filters, [filterType]: value };
+        // Remove empty filters
+        Object.keys(newFilters).forEach(key => {
+            if (newFilters[key as keyof typeof newFilters] === '' || newFilters[key as keyof typeof newFilters] === undefined) {
+                delete newFilters[key as keyof typeof newFilters];
+            }
+        });
         router.get('/marketplace', newFilters, { preserveState: true });
+    };
+
+    // Handle size filter toggle
+    const handleSizeToggle = (size: string, checked: boolean) => {
+        let newSizes: string[];
+        if (checked) {
+            newSizes = [...selectedSizes, size];
+        } else {
+            newSizes = selectedSizes.filter(s => s !== size);
+        }
+        setSelectedSizes(newSizes);
+        
+        const sizeFilter = newSizes.length > 0 ? newSizes.join(',') : '';
+        handleFilterChange('size', sizeFilter);
+    };
+
+    // Handle color filter change
+    const handleColorChange = (color: string) => {
+        setSelectedColor(color);
+        handleFilterChange('color', color);
     };
 
     // Handle favorite toggle
@@ -131,6 +172,32 @@ export default function MarketplaceIndex({
         setSortBy(sortValue);
         router.get('/marketplace', { sort: sortValue }, { preserveState: true });
     };
+
+    // Image navigation functions
+    const nextImage = (productId: number, totalImages: number) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [productId]: ((prev[productId] || 0) + 1) % totalImages
+        }));
+    };
+
+    const prevImage = (productId: number, totalImages: number) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [productId]: ((prev[productId] || 0) - 1 + totalImages) % totalImages
+        }));
+    };
+
+    const getImageCount = (product: Product): number => {
+        return product.images && product.images.length > 0 ? product.images.length : 0;
+    };
+
+    const getCurrentImage = (product: Product): string | null => {
+        if (!product.images || product.images.length === 0) return null;
+        const index = currentImageIndex[product.id] || 0;
+        return product.images[index];
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Marketplace" />
@@ -230,10 +297,26 @@ export default function MarketplaceIndex({
                         <div className="w-64 flex-shrink-0">
                             <Card className="border-gray-200 dark:border-gray-700">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-lg flex items-center">
-                                        <Filter className="mr-2 h-4 w-4" />
-                                        Filter
-                                    </CardTitle>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-lg flex items-center">
+                                            <Filter className="mr-2 h-4 w-4" />
+                                            Filters
+                                        </CardTitle>
+                                        {(filters?.category || filters?.condition || filters?.size || filters?.color) && (
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm"
+                                                onClick={() => {
+                                                    setSelectedSizes([]);
+                                                    setSelectedColor('');
+                                                    router.get('/marketplace');
+                                                }}
+                                                className="text-xs text-red-600 hover:text-red-700"
+                                            >
+                                                Clear All
+                                            </Button>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     {/* Category Filter */}
@@ -264,8 +347,12 @@ export default function MarketplaceIndex({
                                         <div className="space-y-2">
                                             {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
                                                 <div key={size} className="flex items-center space-x-2">
-                                                    <Checkbox id={`size-${size}`} />
-                                                    <Label htmlFor={`size-${size}`} className="text-sm">{size}</Label>
+                                                    <Checkbox 
+                                                        id={`size-${size}`} 
+                                                        checked={selectedSizes.includes(size)}
+                                                        onCheckedChange={(checked) => handleSizeToggle(size, checked as boolean)}
+                                                    />
+                                                    <Label htmlFor={`size-${size}`} className="text-sm cursor-pointer">{size}</Label>
                                                 </div>
                                             ))}
                                         </div>
@@ -274,12 +361,19 @@ export default function MarketplaceIndex({
                                     {/* Color Filter */}
                                     <div>
                                         <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Color</h3>
-                                        <RadioGroup defaultValue="">
+                                        <RadioGroup 
+                                            value={selectedColor} 
+                                            onValueChange={handleColorChange}
+                                        >
                                             <div className="space-y-2">
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="" id="all-colors" />
+                                                    <Label htmlFor="all-colors" className="text-sm cursor-pointer">All Colors</Label>
+                                                </div>
                                                 {['Black', 'White', 'Blue', 'Red', 'Green', 'Yellow', 'Pink', 'Gray'].map((color) => (
                                                     <div key={color} className="flex items-center space-x-2">
                                                         <RadioGroupItem value={color.toLowerCase()} id={`color-${color}`} />
-                                                        <Label htmlFor={`color-${color}`} className="text-sm">{color}</Label>
+                                                        <Label htmlFor={`color-${color}`} className="text-sm cursor-pointer">{color}</Label>
                                                     </div>
                                                 ))}
                                             </div>
@@ -367,10 +461,12 @@ export default function MarketplaceIndex({
                                         <p className="text-gray-600 dark:text-gray-400 mb-4">
                                             Try adjusting your filters or be the first to list an item
                                         </p>
-                                        <Button className="bg-green-600 hover:bg-green-700 text-white">
-                                            <Plus className="mr-2 h-4 w-4" />
-                                            List First Item
-                                        </Button>
+                                        <Link href="/marketplace/create">
+                                            <Button className="bg-green-600 hover:bg-green-700 text-white">
+                                                <Plus className="mr-2 h-4 w-4" />
+                                                List First Item
+                                            </Button>
+                                        </Link>
                                     </CardContent>
                                 </Card>
                             ) : (
@@ -382,58 +478,154 @@ export default function MarketplaceIndex({
                                         >
                                             <CardContent className="p-0">
                                                 {/* Product Image */}
-                                                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden">
-                                                    {product.images && product.images.length > 0 ? (
-                                                        <img 
-                                                            src={`/storage/${product.images[0]}`} 
-                                                            alt={product.title}
-                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                        />
+                                                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden group">
+                                                    {getCurrentImage(product) ? (
+                                                        <>
+                                                            <img 
+                                                                src={`/storage/${getCurrentImage(product)}`} 
+                                                                alt={product.title}
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                            />
+                                                            
+                                                            {/* Image Navigation - Only show if multiple images */}
+                                                            {getImageCount(product) > 1 && (
+                                                                <>
+                                                                    {/* Navigation Arrows */}
+                                                                    <div className="absolute inset-0 flex items-center justify-between px-2 z-20 pointer-events-none">
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                prevImage(product.id, getImageCount(product));
+                                                                            }}
+                                                                            className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
+                                                                            aria-label="Previous image"
+                                                                        >
+                                                                            <ChevronLeft className="h-4 w-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                nextImage(product.id, getImageCount(product));
+                                                                            }}
+                                                                            className="bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transform hover:scale-110 transition-all shadow-lg pointer-events-auto opacity-0 group-hover:opacity-100"
+                                                                            aria-label="Next image"
+                                                                        >
+                                                                            <ChevronRight className="h-4 w-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                    
+                                                                    {/* Dots Indicator */}
+                                                                    <div className="absolute bottom-2 left-0 right-0 flex justify-center items-center gap-1.5 z-10">
+                                                                        {Array.from({ length: getImageCount(product) }).map((_, index) => (
+                                                                            <button
+                                                                                key={index}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setCurrentImageIndex(prev => ({
+                                                                                        ...prev,
+                                                                                        [product.id]: index
+                                                                                    }));
+                                                                                }}
+                                                                                className={`rounded-full transition-all ${
+                                                                                    (currentImageIndex[product.id] || 0) === index 
+                                                                                        ? 'bg-white w-2 h-2 scale-125 shadow-lg' 
+                                                                                        : 'bg-white/60 hover:bg-white/80 w-1.5 h-1.5'
+                                                                                }`}
+                                                                                aria-label={`Go to image ${index + 1}`}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center">
                                                             <ShoppingBag className="h-12 w-12 text-gray-400" />
                                                         </div>
                                                     )}
                                                     
+                                                    {/* Your Listing Badge */}
+                                                    {isOwnProduct(product) && (
+                                                        <Badge className="absolute top-2 left-2 bg-blue-600 text-white z-10">
+                                                            Your Listing
+                                                        </Badge>
+                                                    )}
+                                                    
                                                     {/* Discount Badge */}
-                                                    {product.condition === 'new' && (
-                                                        <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+                                                    {product.condition === 'new' && !isOwnProduct(product) && (
+                                                        <Badge className="absolute top-2 left-2 bg-red-500 text-white z-10">
                                                             New
                                                         </Badge>
                                                     )}
                                                     
                                                     {/* Featured Badge */}
                                                     {product.is_featured && (
-                                                        <Badge className="absolute top-2 right-2 bg-yellow-500 text-white">
+                                                        <Badge className="absolute top-2 right-2 bg-yellow-500 text-white z-10">
                                                             <Star className="h-3 w-3 mr-1" />
                                                             Featured
                                                         </Badge>
                                                     )}
                                                     
-                                                    {/* Quick Actions */}
-                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                    {/* Quick Actions Overlay */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end justify-center pb-12 z-10">
                                                         <div className="flex space-x-2">
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="secondary" 
-                                                                className={`bg-white/90 hover:bg-white ${favorites.includes(product.id) ? 'text-red-500' : ''}`}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    toggleFavorite(product.id);
-                                                                }}
-                                                            >
-                                                                <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
-                                                            </Button>
-                                                            <Button 
-                                                                size="sm" 
-                                                                className="bg-green-600 hover:bg-green-700 text-white"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    contactSeller(product.id, product.user.id, product.title);
-                                                                }}
-                                                            >
-                                                                <MessageCircle className="h-4 w-4" />
-                                                            </Button>
+                                                            {isOwnProduct(product) ? (
+                                                                <>
+                                                                    {/* Own Product - Show Edit and Mark as Sold */}
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        variant="secondary" 
+                                                                        className="bg-white/95 hover:bg-white shadow-lg"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            router.get(`/marketplace/${product.id}/edit`);
+                                                                        }}
+                                                                        title="Edit listing"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (confirm('Mark this item as sold?')) {
+                                                                                router.patch(`/marketplace/${product.id}/mark-sold`);
+                                                                            }
+                                                                        }}
+                                                                        title="Mark as sold"
+                                                                    >
+                                                                        <Tag className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {/* Other's Product - Show Favorite and Contact */}
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        variant="secondary" 
+                                                                        className={`bg-white/95 hover:bg-white ${favorites.includes(product.id) ? 'text-red-500' : ''} shadow-lg`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleFavorite(product.id);
+                                                                        }}
+                                                                        title="Add to favorites"
+                                                                    >
+                                                                        <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
+                                                                    </Button>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            contactSeller(product.id, product.user.id, product.title);
+                                                                        }}
+                                                                        title="Contact seller"
+                                                                    >
+                                                                        <MessageCircle className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

@@ -5,7 +5,7 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
-import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3 } from 'lucide-react';
+import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon } from 'lucide-react';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -87,8 +87,71 @@ export default function Profile({
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [profilePicture, setProfilePicture] = useState<File | null>(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type (only PNG and JPEG)
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload only PNG or JPEG images.');
+                e.target.value = '';
+                return;
+            }
+
+            // Validate file size (max 2MB)
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSize) {
+                alert('File size must be less than 2MB.');
+                e.target.value = '';
+                return;
+            }
+
+            // Validate dimensions using Image object
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                
+                // Check minimum dimensions
+                if (img.width < 100 || img.height < 100) {
+                    alert('Image must be at least 100x100 pixels.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Check maximum dimensions
+                if (img.width > 5000 || img.height > 5000) {
+                    alert('Image must not exceed 5000x5000 pixels.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                setProfilePicture(file);
+                
+                // Create preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setProfilePicturePreview(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            };
+            
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                alert('Invalid image file.');
+                e.target.value = '';
+            };
+            
+            img.src = objectUrl;
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -211,6 +274,73 @@ export default function Profile({
                                                 </div>
                                                 <InputError message={errors.email} />
                                             </div>
+                                        </div>
+
+                                        {/* Profile Picture Upload */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="profile_picture" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Profile Picture
+                                            </Label>
+                                            <div className="flex items-start space-x-4">
+                                                <div className="flex-shrink-0">
+                                                    {profilePicturePreview ? (
+                                                        <div className="relative">
+                                                            <img 
+                                                                src={profilePicturePreview} 
+                                                                alt="Profile preview" 
+                                                                className="w-24 h-24 rounded-full object-cover border-2 border-green-500"
+                                                            />
+                                                            <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1">
+                                                                <CheckCircle className="h-4 w-4 text-white" />
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                                                            <User className="h-12 w-12 text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="relative">
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            id="profile_picture"
+                                                            name="profile_picture"
+                                                            type="file"
+                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+                                                            onChange={handleFileChange}
+                                                            className="hidden"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="w-full sm:w-auto"
+                                                        >
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            Choose Image
+                                                        </Button>
+                                                    </div>
+                                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                        <div className="flex items-start space-x-2">
+                                                            <ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                                                            <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                                                                <p className="font-medium">Accepted formats: PNG, JPEG only</p>
+                                                                <p className="text-blue-600 dark:text-blue-300">File size: Maximum 2MB</p>
+                                                                <p className="text-blue-600 dark:text-blue-300">Dimensions: 100x100 - 5000x5000 pixels</p>
+                                                                <p className="text-blue-500 dark:text-blue-400 text-xs mt-1">Image will be automatically optimized and resized for best performance.</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {profilePicture && (
+                                                        <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                                                            <CheckCircle className="h-4 w-4" />
+                                                            <span className="text-sm font-medium">{profilePicture.name}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <InputError message={errors.profile_picture} />
                                         </div>
 
                                         {mustVerifyEmail && auth.user.email_verified_at === null && (

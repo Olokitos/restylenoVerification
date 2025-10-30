@@ -44,6 +44,12 @@ class Product extends Model
         'bust' => 'decimal:1',
         'cuff' => 'decimal:1',
         'bicep_length' => 'decimal:1',
+        'views' => 'integer',
+    ];
+
+    protected $attributes = [
+        'views' => 0,
+        'is_featured' => false,
     ];
 
     public function user()

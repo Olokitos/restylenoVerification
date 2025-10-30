@@ -6,8 +6,6 @@ import {
     Upload,
     X,
     Camera,
-    Plus,
-    Minus
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -18,7 +16,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,8 +27,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/marketplace',
     },
     {
-        title: 'Sell Item',
-        href: '/marketplace/create',
+        title: 'Edit Item',
+        href: '#',
     },
 ];
 
@@ -41,7 +38,24 @@ interface Category {
     slug: string;
 }
 
-interface SellItemPageProps {
+interface Product {
+    id: number;
+    title: string;
+    description: string;
+    price: number;
+    condition: string;
+    size: string;
+    brand: string | null;
+    color: string | null;
+    category: {
+        id: number;
+        name: string;
+    };
+    images: string[];
+}
+
+interface EditItemPageProps {
+    product: Product;
     categories: Category[];
 }
 
@@ -58,40 +72,58 @@ const defaultCategories = [
   'Outerwear'
 ];
 
-export default function SellItem({ categories }: SellItemPageProps) {
+export default function EditItem({ product, categories }: EditItemPageProps) {
     const [images, setImages] = useState<File[]>([]);
-    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>(product.images.map(img => `/storage/${img}`));
+    const [existingImages, setExistingImages] = useState<string[]>(product.images);
 
     const effectiveCategories: string[] = (categories && categories.length > 0)
       ? categories.map((cat: any) => cat.name)
       : defaultCategories;
 
-    const { data, setData, post, processing, errors } = useForm({
-        title: '',
-        description: '',
-        price: '',
-        condition: '',
-        size: '',
-        brand: '',
-        color: '',
-        category: '', // only field for category
+    const { data, setData, put, processing, errors } = useForm({
+        title: product.title,
+        description: product.description,
+        price: product.price.toString(),
+        condition: product.condition,
+        size: product.size,
+        brand: product.brand || '',
+        color: product.color || '',
+        category: product.category.name,
         images: [] as File[],
+        keep_existing_images: true,
     });
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        const newImages = [...images, ...files].slice(0, 5); // Max 5 images
+        const totalImages = existingImages.length + images.length + files.length;
+        
+        if (totalImages > 5) {
+            alert('Maximum 5 images allowed');
+            return;
+        }
+        
+        const newImages = [...images, ...files];
         setImages(newImages);
         
-        // Create preview URLs
-        const newPreviewUrls = newImages.map(file => URL.createObjectURL(file));
-        setPreviewUrls(newPreviewUrls);
+        // Create preview URLs for new images
+        const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+        setPreviewUrls([...previewUrls, ...newPreviewUrls]);
         
         setData('images', newImages);
     };
 
-    const removeImage = (index: number) => {
-        const newImages = images.filter((_, i) => i !== index);
+    const removeExistingImage = (index: number) => {
+        const newExisting = existingImages.filter((_, i) => i !== index);
+        const newPreviews = previewUrls.filter((_, i) => i !== index);
+        
+        setExistingImages(newExisting);
+        setPreviewUrls(newPreviews);
+    };
+
+    const removeNewImage = (index: number) => {
+        const actualIndex = index - existingImages.length;
+        const newImages = images.filter((_, i) => i !== actualIndex);
         const newPreviewUrls = previewUrls.filter((_, i) => i !== index);
         
         setImages(newImages);
@@ -101,10 +133,31 @@ export default function SellItem({ categories }: SellItemPageProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/marketplace', {
+        
+        const formData = new FormData();
+        formData.append('title', data.title);
+        formData.append('description', data.description);
+        formData.append('price', data.price);
+        formData.append('condition', data.condition);
+        formData.append('size', data.size);
+        formData.append('brand', data.brand);
+        formData.append('color', data.color);
+        formData.append('category', data.category);
+        
+        // Add existing images to keep
+        existingImages.forEach((img, index) => {
+            formData.append(`existing_images[${index}]`, img);
+        });
+        
+        // Add new images
+        images.forEach((img, index) => {
+            formData.append(`images[${index}]`, img);
+        });
+        
+        put(`/marketplace/${product.id}`, {
+            data: formData as any,
             forceFormData: true,
             onSuccess: () => {
-                // Redirect to marketplace after listing the item
                 window.location.href = '/marketplace';
             }
         });
@@ -121,7 +174,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Sell Item" />
+            <Head title="Edit Item" />
             
             <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/30 dark:to-green-800/20">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -137,9 +190,9 @@ export default function SellItem({ categories }: SellItemPageProps) {
                             </Link>
                         </div>
                         <div className="text-center">
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sell Your Item</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Your Item</h1>
                             <p className="text-gray-600 dark:text-gray-400 mt-2">
-                                List your sustainable fashion items for the community
+                                Update your marketplace listing
                             </p>
                         </div>
                         <div className="w-24"></div> {/* Spacer for centering */}
@@ -155,39 +208,12 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                         Product Images
                                     </CardTitle>
                                     <CardDescription>
-                                        Upload up to 5 images of your item. First image will be the main display image.
+                                        Upload up to 5 images total. Current: {previewUrls.length}/5
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {/* Image Upload Area */}
                                     <div className="space-y-4">
-                                        {/* Upload Button */}
-                                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
-                                            <input
-                                                type="file"
-                                                multiple
-                                                accept="image/*"
-                                                onChange={handleImageUpload}
-                                                className="hidden"
-                                                id="image-upload"
-                                            />
-                                            <label
-                                                htmlFor="image-upload"
-                                                className="cursor-pointer flex flex-col items-center space-y-2"
-                                            >
-                                                <Upload className="h-8 w-8 text-gray-400" />
-                                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                    <span className="font-medium text-green-600 hover:text-green-500">
-                                                        Click to upload
-                                                    </span>
-                                                    {' '}or drag and drop
-                                                </div>
-                                                <p className="text-xs text-gray-500">
-                                                    PNG, JPG, GIF up to 10MB each
-                                                </p>
-                                            </label>
-                                        </div>
-
                                         {/* Image Previews */}
                                         {previewUrls.length > 0 && (
                                             <div className="grid grid-cols-2 gap-4">
@@ -200,13 +226,53 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                                         />
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeImage(index)}
+                                                            onClick={() => {
+                                                                if (index < existingImages.length) {
+                                                                    removeExistingImage(index);
+                                                                } else {
+                                                                    removeNewImage(index);
+                                                                }
+                                                            }}
                                                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                         >
                                                             <X className="h-4 w-4" />
                                                         </button>
+                                                        {index < existingImages.length && (
+                                                            <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                                                                Existing
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
+                                            </div>
+                                        )}
+
+                                        {/* Upload Button */}
+                                        {previewUrls.length < 5 && (
+                                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
+                                                    className="hidden"
+                                                    id="image-upload"
+                                                />
+                                                <label
+                                                    htmlFor="image-upload"
+                                                    className="cursor-pointer flex flex-col items-center space-y-2"
+                                                >
+                                                    <Upload className="h-8 w-8 text-gray-400" />
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                                        <span className="font-medium text-green-600 hover:text-green-500">
+                                                            Click to upload
+                                                        </span>
+                                                        {' '}or drag and drop
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">
+                                                        PNG, JPG, GIF up to 10MB each
+                                                    </p>
+                                                </label>
                                             </div>
                                         )}
 
@@ -395,7 +461,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                 disabled={processing}
                                 className="bg-green-600 hover:bg-green-700 text-white"
                             >
-                                {processing ? 'Listing Item...' : 'List Item'}
+                                {processing ? 'Updating...' : 'Update Item'}
                             </Button>
                         </div>
                     </form>
@@ -404,3 +470,4 @@ export default function SellItem({ categories }: SellItemPageProps) {
         </AppLayout>
     );
 }
+

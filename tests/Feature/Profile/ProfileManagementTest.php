@@ -57,8 +57,54 @@ describe('Profile Management - Edit Profile', function () {
         $response->assertSessionHasErrors(['name', 'email']);
     });
     
+    it('rejects name with numbers', function () {
+        $user = User::factory()->create();
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => 'John123', // Name with numbers
+            'email' => $user->email
+        ]);
+        
+        $response->assertSessionHasErrors('name');
+        
+        $user->refresh();
+        expect($user->name)->not->toBe('John123');
+    });
+    
+    it('rejects name with special characters', function () {
+        $user = User::factory()->create();
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => 'John@Doe!', // Name with special characters
+            'email' => $user->email
+        ]);
+        
+        $response->assertSessionHasErrors('name');
+        
+        $user->refresh();
+        expect($user->name)->not->toBe('John@Doe!');
+    });
+    
+    it('accepts valid name with letters and spaces only', function () {
+        $user = User::factory()->create([
+            'name' => 'Old Name'
+        ]);
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => 'John Doe Smith', // Valid name with spaces
+            'email' => $user->email
+        ]);
+        
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        
+        $user->refresh();
+        expect($user->name)->toBe('John Doe Smith');
+    });
+    
     // Case-016: User uploads invalid file type
-    it('fails when user uploads invalid file type for profile picture', function () {
+    // Only PNG and JPEG files are allowed, all other formats should be rejected with error message
+    it('fails when user uploads PDF file', function () {
         Storage::fake('public');
         $user = User::factory()->create();
         
@@ -71,6 +117,92 @@ describe('Profile Management - Edit Profile', function () {
         ]);
         
         $response->assertSessionHasErrors('profile_picture');
+    });
+    
+    it('fails when user uploads GIF file', function () {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        
+        $gifFile = UploadedFile::fake()->image('image.gif');
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $gifFile
+        ]);
+        
+        $response->assertSessionHasErrors('profile_picture');
+    });
+    
+    it('fails when user uploads WEBP file', function () {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        
+        $webpFile = UploadedFile::fake()->create('image.webp', 100, 'image/webp');
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $webpFile
+        ]);
+        
+        $response->assertSessionHasErrors('profile_picture');
+    });
+    
+    it('accepts PNG file as valid profile picture', function () {
+        Storage::fake('public');
+        $user = User::factory()->create([
+            'name' => 'Jane Smith' // Ensure valid name
+        ]);
+        
+        // Create image with proper dimensions (minimum 100x100)
+        $pngFile = UploadedFile::fake()->image('profile.png', 500, 500);
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $pngFile
+        ]);
+        
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        
+        // Verify file is stored with new naming (user-{id}-{timestamp}-medium.jpg)
+        $files = Storage::disk('public')->files('profile-pictures');
+        expect($files)->toHaveCount(3); // thumbnail, medium, large
+        
+        // Verify database is updated with file path
+        $user->refresh();
+        expect($user->profile_picture)->toContain('profile-pictures/user-' . $user->id);
+        expect($user->profile_picture)->toContain('-medium.jpg');
+    });
+    
+    it('accepts JPEG file as valid profile picture', function () {
+        Storage::fake('public');
+        $user = User::factory()->create([
+            'name' => 'John Doe' // Ensure valid name
+        ]);
+        
+        // Create image with proper dimensions (minimum 100x100)
+        $jpegFile = UploadedFile::fake()->image('profile.jpg', 500, 500);
+        
+        $response = $this->actingAs($user)->patch(route('settings.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $jpegFile
+        ]);
+        
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        
+        // Verify file is stored with new naming (user-{id}-{timestamp}-medium.jpg)
+        $files = Storage::disk('public')->files('profile-pictures');
+        expect($files)->toHaveCount(3); // thumbnail, medium, large
+        
+        // Verify database is updated with file path
+        $user->refresh();
+        expect($user->profile_picture)->toContain('profile-pictures/user-' . $user->id);
+        expect($user->profile_picture)->toContain('-medium.jpg');
     });
 });
 

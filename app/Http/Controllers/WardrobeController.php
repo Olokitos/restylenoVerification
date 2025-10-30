@@ -31,7 +31,8 @@ class WardrobeController extends Controller
             'color' => 'required|string|max:20',
             'size' => 'required|string|max:10',
             'description' => 'nullable|string|max:200',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
         $wardrobeItem = new WardrobeItem([
@@ -44,18 +45,43 @@ class WardrobeController extends Controller
             'description' => $request->description,
         ]);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
+        // Handle multiple images upload
+        if ($request->hasFile('images')) {
+            try {
+                $uploadedImages = [];
+                foreach ($request->file('images') as $image) {
+                    // Validate image size and type
+                    if ($image->getSize() > 5120 * 1024) { // 5MB limit
+                        continue; // Skip images that are too large
+                    }
+
+                    $imagePath = $image->store('wardrobe', 'public');
+                    $uploadedImages[] = $imagePath;
+                }
+
+                if (!empty($uploadedImages)) {
+                    $wardrobeItem->images = $uploadedImages;
+                    // Set first image as image_path for backward compatibility
+                    $wardrobeItem->image_path = $uploadedImages[0];
+                }
+                
+            } catch (\Exception $e) {
+                \Log::error('Images upload failed: ' . $e->getMessage());
+                return redirect()->back()->withErrors(['images' => 'Failed to upload images. Please try again.']);
+            }
+        } elseif ($request->hasFile('image')) {
+            // Fallback to single image for backward compatibility
             try {
                 $image = $request->file('image');
                 
                 // Validate image size and type
-                if ($image->getSize() > 2048 * 1024) { // 2MB limit
-                    return redirect()->back()->withErrors(['image' => 'Image size must be less than 2MB.']);
+                if ($image->getSize() > 5120 * 1024) { // 5MB limit
+                    return redirect()->back()->withErrors(['image' => 'Image size must be less than 5MB.']);
                 }
 
                 $imagePath = $image->store('wardrobe', 'public');
                 $wardrobeItem->image_path = $imagePath;
+                $wardrobeItem->images = [$imagePath];
                 
             } catch (\Exception $e) {
                 \Log::error('Image upload failed: ' . $e->getMessage());
@@ -93,7 +119,8 @@ class WardrobeController extends Controller
             'color' => 'required|string|max:20',
             'size' => 'required|string|max:10',
             'description' => 'nullable|string|max:200',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
         // Update basic fields
@@ -106,17 +133,66 @@ class WardrobeController extends Controller
             'description' => $request->description,
         ]);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
+        // Handle multiple images upload
+        if ($request->hasFile('images')) {
+            try {
+                // Delete old images if they exist
+                if ($wardrobeItem->images && is_array($wardrobeItem->images)) {
+                    foreach ($wardrobeItem->images as $oldImagePath) {
+                        if ($oldImagePath) {
+                            Storage::disk('public')->delete($oldImagePath);
+                        }
+                    }
+                }
+                if ($wardrobeItem->image_path) {
+                    Storage::disk('public')->delete($wardrobeItem->image_path);
+                }
+
+                $uploadedImages = [];
+                foreach ($request->file('images') as $image) {
+                    // Validate image size and type
+                    if ($image->getSize() > 5120 * 1024) { // 5MB limit
+                        continue; // Skip images that are too large
+                    }
+
+                    $imagePath = $image->store('wardrobe', 'public');
+                    $uploadedImages[] = $imagePath;
+                }
+
+                if (!empty($uploadedImages)) {
+                    $wardrobeItem->images = $uploadedImages;
+                    // Set first image as image_path for backward compatibility
+                    $wardrobeItem->image_path = $uploadedImages[0];
+                    $wardrobeItem->save();
+                }
+                
+                \Log::info('Images updated successfully', [
+                    'item_id' => $wardrobeItem->id,
+                    'images_count' => count($uploadedImages)
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error('Images upload failed: ' . $e->getMessage());
+                return redirect()->back()->withErrors(['images' => 'Failed to upload images. Please try again.']);
+            }
+        } elseif ($request->hasFile('image')) {
+            // Fallback to single image for backward compatibility
             try {
                 $image = $request->file('image');
                 
                 // Validate image size and type
-                if ($image->getSize() > 2048 * 1024) { // 2MB limit
-                    return redirect()->back()->withErrors(['image' => 'Image size must be less than 2MB.']);
+                if ($image->getSize() > 5120 * 1024) { // 5MB limit
+                    return redirect()->back()->withErrors(['image' => 'Image size must be less than 5MB.']);
                 }
 
-                // Delete old image if exists
+                // Delete old images if they exist
+                if ($wardrobeItem->images && is_array($wardrobeItem->images)) {
+                    foreach ($wardrobeItem->images as $oldImagePath) {
+                        if ($oldImagePath) {
+                            Storage::disk('public')->delete($oldImagePath);
+                        }
+                    }
+                }
                 if ($wardrobeItem->image_path) {
                     Storage::disk('public')->delete($wardrobeItem->image_path);
                 }
@@ -124,7 +200,9 @@ class WardrobeController extends Controller
                 $imagePath = $image->store('wardrobe', 'public');
                 
                 // Update image path
-                $wardrobeItem->update(['image_path' => $imagePath]);
+                $wardrobeItem->images = [$imagePath];
+                $wardrobeItem->image_path = $imagePath;
+                $wardrobeItem->save();
                 
                 \Log::info('Image updated successfully', [
                     'item_id' => $wardrobeItem->id,

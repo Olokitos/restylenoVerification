@@ -238,80 +238,110 @@ export default function ProductShow({ product, relatedProducts }: Props) {
 
               {/* Action Buttons */}
               <div className="space-y-4">
-                <div className="flex space-x-3">
-                  <Button 
-                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-                    onClick={() => {
-                      console.log('Buy Now button clicked for product:', product.id);
-                      console.log('Auth user:', auth.user);
-                      
-                      // Check if user is logged in
-                      if (!auth.user) {
-                        alert('Please log in to purchase items');
-                        return;
-                      }
-                      
-                      // Check if user is trying to buy their own product
-                      if (auth.user.id === product.user_id) {
-                        alert('You cannot buy your own product');
-                        return;
-                      }
-                      
-                      // Check if product is active
-                      if (product.status !== 'active') {
-                        alert('This product is no longer available');
-                        return;
-                      }
-                      
-                      console.log('Initiating transaction...');
-                      router.post(`/transactions/initiate/${product.id}`, {
-                        payment_method: 'manual'
-                      }, {
-                        onSuccess: (page) => {
-                          console.log('Transaction initiated successfully:', page);
-                          // Transaction will be created and user redirected to transaction page
-                        },
-                        onError: (errors) => {
-                          console.error('Transaction initiation failed:', errors);
-                          alert('Failed to initiate transaction: ' + JSON.stringify(errors));
-                        },
-                        onFinish: () => {
-                          console.log('Transaction initiation finished');
-                        }
-                      });
-                    }}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Buy Now
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => setIsFavorited(!isFavorited)}
-                  >
-                    <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current text-red-500' : ''}`} />
-                  </Button>
-                  <Button variant="outline" size="icon">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="flex space-x-3">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => {
-                      router.get('/messages/conversation/get', {
-                        user_id: product.user?.id,
-                        product_id: product.id
-                      });
-                    }}
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Contact Seller
-                  </Button>
-                  
-                </div>
+                {auth.user && auth.user.id === product.user.id ? (
+                  /* Own Product - Show Management Options */
+                  <>
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
+                        This is your listing
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-300">
+                        Manage your product below
+                      </p>
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button 
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => {
+                          router.get(`/marketplace/${product.id}/edit`);
+                        }}
+                      >
+                        <Star className="h-4 w-4 mr-2" />
+                        Edit Listing
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => {
+                          if (confirm('Mark this item as sold? This will remove it from the marketplace.')) {
+                            router.patch(`/marketplace/${product.id}/mark-sold`);
+                          }
+                        }}
+                      >
+                        Mark as Sold
+                      </Button>
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button variant="outline" size="icon">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  /* Other's Product - Show Buy/Contact Options */
+                  <>
+                    <div className="flex space-x-3">
+                      <Button 
+                        className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+                        onClick={() => {
+                          // Check if user is logged in
+                          if (!auth.user) {
+                            alert('Please log in to purchase items');
+                            return;
+                          }
+                          
+                          // Check if product is active
+                          if (product.status !== 'active') {
+                            alert('This product is no longer available');
+                            return;
+                          }
+                          
+                          router.post(`/transactions/initiate/${product.id}`, {
+                            payment_method: 'manual'
+                          }, {
+                            onSuccess: (page) => {
+                              // Transaction will be created and user redirected to transaction page
+                            },
+                            onError: (errors) => {
+                              alert('Failed to initiate transaction. Please try again.');
+                            }
+                          });
+                        }}
+                      >
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Buy Now
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => setIsFavorited(!isFavorited)}
+                      >
+                        <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current text-red-500' : ''}`} />
+                      </Button>
+                      <Button variant="outline" size="icon">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => {
+                          router.get('/messages/conversation/get', {
+                            user_id: product.user?.id,
+                            product_id: product.id
+                          });
+                        }}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Contact Seller
+                      </Button>
+                    </div>
+                  </>
+                )}
 
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
