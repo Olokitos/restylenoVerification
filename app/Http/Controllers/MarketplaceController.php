@@ -107,6 +107,18 @@ class MarketplaceController extends Controller
         }
 
         $products = $query->paginate(12);
+        
+        // Add rating data to products
+        $products->getCollection()->transform(function ($product) {
+            $ratingAverage = round($product->user->receivedRatings()->avg('rating') ?? 0, 1);
+            $ratingCount = $product->user->receivedRatings()->count();
+            $product->seller_rating = [
+                'average' => $ratingAverage,
+                'count' => $ratingCount,
+            ];
+            return $product;
+        });
+        
         $categories = Category::where(function ($query) {
                 $query->where('is_active', true)
                     ->orWhereNull('is_active');
@@ -119,6 +131,17 @@ class MarketplaceController extends Controller
             ->latest()
             ->take(6)
             ->get();
+        
+        // Add rating data to featured products
+        $featuredProducts->transform(function ($product) {
+            $ratingAverage = round($product->user->receivedRatings()->avg('rating') ?? 0, 1);
+            $ratingCount = $product->user->receivedRatings()->count();
+            $product->seller_rating = [
+                'average' => $ratingAverage,
+                'count' => $ratingCount,
+            ];
+            return $product;
+        });
 
         $filters = $request->only([
             'category',
@@ -245,18 +268,27 @@ class MarketplaceController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => ['required', 'integer', 'min:1'],
             'condition' => 'required|in:new,like_new,good,fair,poor',
-            'size' => 'required|string|max:20',
             'brand' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:50',
             'category' => 'required|string|max:100', // Accept category name
             'images' => 'required|array|min:1|max:5',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB max
-        ]);
+        ];
+        
+        // Size is optional for Accessories and Hat
+        $normalizedCategory = strtolower($request->category ?? '');
+        if (!in_array($normalizedCategory, ['accessories', 'hat', 'hats'])) {
+            $rules['size'] = 'required|string|max:20';
+        } else {
+            $rules['size'] = 'nullable|string|max:20';
+        }
+        
+        $validated = $request->validate($rules);
 
         // Find or create category by name
         $category = Category::firstOrCreate(
@@ -329,19 +361,28 @@ class MarketplaceController extends Controller
         
         $product = $marketplace; // Alias for readability
 
-        $validated = $request->validate([
+        $rules = [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => ['required', 'integer', 'min:1'],
             'condition' => 'required|in:new,like_new,good,fair,poor',
-            'size' => 'required|string|max:20',
             'brand' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:50',
             'category' => 'required|string|max:100',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:10240',
             'existing_images' => 'nullable|array',
-        ]);
+        ];
+        
+        // Size is optional for Accessories and Hat
+        $normalizedCategory = strtolower($request->category ?? '');
+        if (!in_array($normalizedCategory, ['accessories', 'hat', 'hats'])) {
+            $rules['size'] = 'required|string|max:20';
+        } else {
+            $rules['size'] = 'nullable|string|max:20';
+        }
+        
+        $validated = $request->validate($rules);
 
         // Find or create category by name
         $category = Category::firstOrCreate(

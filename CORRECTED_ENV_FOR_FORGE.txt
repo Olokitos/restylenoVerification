@@ -1,0 +1,97 @@
+# Application Configuration
+APP_NAME=Restyle
+APP_ENV=production
+APP_KEY=base64:4MU7y8FRD3BCsh3aYQsenUS8wLvckgBvGupL4zRIyQE=
+APP_DEBUG=false
+APP_URL=https://restyle-production.on-forge.com
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+
+PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+# Logging
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=error
+
+# Database Configuration
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=forge
+DB_USERNAME=forge
+DB_PASSWORD=WEOoyBs22jJzHDBOEHzB
+
+# Session
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+SESSION_SECURE_COOKIE=true
+
+# Broadcasting
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+
+# Queue
+QUEUE_CONNECTION=database
+
+# Cache
+CACHE_STORE=database
+
+# Memcached Configuration
+MEMCACHED_HOST=127.0.0.1
+
+# Redis Configuration
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Mail Configuration
+MAIL_MAILER=log
+MAIL_SCHEME=null
+MAIL_HOST=127.0.0.1
+MAIL_PORT=2525
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="noreply@restyle-production.on-forge.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# AWS Configuration (Optional - for S3 storage)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+# Vite Configuration
+VITE_APP_NAME="${APP_NAME}"
+VITE_WEATHER_API_KEY=6e830a5991ec8515dd4c1e1531069009
+
+# Vite Dev Server Configuration (for local development)
+VITE_DEV_SERVER_HOST=127.0.0.1
+VITE_DEV_SERVER_PORT=5173
+VITE_DEV_SERVER_HMR_HOST=127.0.0.1
+VITE_DEV_SERVER_HMR_PORT=5173
+
+# Third-Party API Keys
+# Hugging Face API for AI recommendations
+HUGGING_FACE_API_TOKEN=YOUR_HUGGING_FACE_API_TOKEN_HERE
+
+# Pusher Configuration (Optional - for real-time features)
+VITE_PUSHER_APP_KEY=
+VITE_PUSHER_HOST=
+VITE_PUSHER_PORT=
+VITE_PUSHER_SCHEME=
+VITE_PUSHER_APP_CLUSTER=
+

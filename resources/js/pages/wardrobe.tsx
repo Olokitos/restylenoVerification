@@ -153,6 +153,45 @@ const classifyCategory = (category: string): string => {
     return 'others';
 };
 
+// Check if wardrobe items can form a valid outfit combination
+// A valid outfit needs either: a dress (standalone), OR at least one top AND one bottom
+const canFormValidOutfit = (items: WardrobeItem[]): boolean => {
+    if (items.length < 2) {
+        return false;
+    }
+
+    let hasDress = false;
+    let hasTop = false;
+    let hasBottom = false;
+
+    for (const item of items) {
+        const category = (item.category || '').toLowerCase();
+        
+        // Check for dresses (standalone outfits)
+        if (category.includes('dress') || category.includes('romper') || category.includes('jumpsuit')) {
+            hasDress = true;
+        }
+        
+        // Check for tops
+        if (category.includes('top') || category.includes('shirt') || 
+            category.includes('t-shirt') || category.includes('blouse') || 
+            category.includes('tank') || category.includes('sweater') || 
+            category.includes('hoodie')) {
+            hasTop = true;
+        }
+        
+        // Check for bottoms
+        if (category.includes('bottom') || category.includes('pants') || 
+            category.includes('jeans') || category.includes('shorts') || 
+            category.includes('skirt') || category.includes('legging')) {
+            hasBottom = true;
+        }
+    }
+
+    // Valid outfit if: has a dress OR (has top AND has bottom)
+    return hasDress || (hasTop && hasBottom);
+};
+
 const getWeatherProfile = (temp: number, condition: string) => {
     const normalizedCondition = condition.toLowerCase();
 
@@ -1210,6 +1249,32 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                 setTimeout(() => setSuccessMessage(null), 3000);
                 return;
             }
+            
+            // Check if user has only one item
+            if (wardrobeItems.length === 1) {
+                setAiSuggestion({
+                    message: "You need at least 2 items in your wardrobe to generate outfit recommendations.",
+                    items: [],
+                    reason: "Insufficient items for recommendations"
+                });
+                setSuggestionLoading(false);
+                setSuccessMessage('Add more items to create stylish outfit combinations! 👔✨');
+                setTimeout(() => setSuccessMessage(null), 5000);
+                return;
+            }
+            
+            // Check if items can form a valid outfit combination
+            if (!canFormValidOutfit(wardrobeItems)) {
+                setAiSuggestion({
+                    message: "Your wardrobe items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom.",
+                    items: [],
+                    reason: "Items cannot form valid outfit combination"
+                });
+                setSuggestionLoading(false);
+                setSuccessMessage('Add items from different categories (tops, bottoms, or dresses) to create outfit combinations! 👗👔👖');
+                setTimeout(() => setSuccessMessage(null), 6000);
+                return;
+            }
 
             if (!currentWeather) {
                 setSuccessMessage('Fetching weather data first... 🌤️');
@@ -1250,57 +1315,130 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
             }
 
             // Try to get recommendations from Hugging Face API first
-            try {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                
-                const response = await fetch('/api/wardrobe/ai-recommendations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        wardrobe_items: wardrobeItems,
-                        weather: currentWeather,
-                        preferences: userPreferences,
-                        max_recommendations: maxRecommendations,
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
+            // Show a message that we're waiting for the AI service
+            setSuccessMessage('🤖 AI is analyzing your wardrobe and generating recommendations. This may take a moment...');
+            
+            // Retry mechanism for timeout errors
+            let retryCount = 0;
+            const maxRetries = 3;
+            let lastError: any = null;
+            
+            while (retryCount <= maxRetries) {
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                     
-                    if (data.success && data.recommendations) {
-                        const recommendations = data.recommendations;
+                    // Fetch with no timeout - wait as long as needed
+                    const response = await fetch('/api/wardrobe/ai-recommendations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            wardrobe_items: wardrobeItems,
+                            weather: currentWeather,
+                            preferences: userPreferences,
+                            max_recommendations: maxRecommendations,
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
                         
-                        setAiSuggestion(recommendations);
-                        setMlConfidence(recommendations.confidence || 0.85);
-                        setSuccessMessage('🤖 AI-powered outfit suggestions generated using Hugging Face! ✨');
-                        setTimeout(() => setSuccessMessage(null), 4000);
+                        if (data.success && data.recommendations) {
+                            const recommendations = data.recommendations;
+                            
+                            setAiSuggestion(recommendations);
+                            setMlConfidence(recommendations.confidence || 0.85);
+                            setSuccessMessage('🤖 AI-powered outfit suggestions generated using Hugging Face! ✨');
+                            setTimeout(() => setSuccessMessage(null), 4000);
+                            
+                            // Cache the result
+                            localStorage.setItem(cacheKey, JSON.stringify({
+                                suggestion: recommendations,
+                                mlConfidence: recommendations.confidence || 0.85
+                            }));
+                            localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+                            
+                            setSuggestionLoading(false);
+                            return; // Success! Exit early
+                        }
+                    } else {
+                        // Handle error responses from the API
+                        const errorData = await response.json().catch(() => ({}));
                         
-                        // Cache the result
-                        localStorage.setItem(cacheKey, JSON.stringify({
-                            suggestion: recommendations,
-                            mlConfidence: recommendations.confidence || 0.85
-                        }));
-                        localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-                        
-                        setSuggestionLoading(false);
-                        return; // Success! Exit early
+                        // If it's a timeout, retry
+                        if (errorData.timeout && retryCount < maxRetries) {
+                            retryCount++;
+                            setSuccessMessage(`⏳ AI service is still processing (attempt ${retryCount}/${maxRetries + 1}). Please wait...`);
+                            // Wait 2 seconds before retrying
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            continue; // Retry
+                        } else if (errorData.message) {
+                            // Real error - don't retry
+                            setAiSuggestion({
+                                message: errorData.message,
+                                items: [],
+                                reason: errorData.requires_combination 
+                                    ? "Items cannot form valid outfit combination"
+                                    : errorData.item_count === 1 
+                                    ? "Insufficient items for recommendations" 
+                                    : "Filtered items insufficient"
+                            });
+                            setSuggestionLoading(false);
+                            setSuccessMessage(errorData.message);
+                            setTimeout(() => setSuccessMessage(null), 6000);
+                            return;
+                        }
                     }
+                    
+                    // If we get here, break out of retry loop and fall back
+                    break;
+                    
+                } catch (apiError: any) {
+                    lastError = apiError;
+                    console.warn('Hugging Face API error:', apiError);
+                    
+                    // If it's a timeout/network error and we haven't exceeded retries, retry
+                    if (apiError.message && 
+                        (apiError.message.includes('timeout') || 
+                         apiError.message.includes('exceeded') ||
+                         apiError.message.includes('network') ||
+                         apiError.message.includes('Failed to fetch')) &&
+                        retryCount < maxRetries) {
+                        retryCount++;
+                        setSuccessMessage(`⏳ Connection is slow (attempt ${retryCount}/${maxRetries + 1}). Retrying...`);
+                        // Wait 2 seconds before retrying
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        continue; // Retry
+                    }
+                    
+                    // If it's a timeout but we've exceeded retries, keep waiting (don't fall back)
+                    if (apiError.message && 
+                        (apiError.message.includes('timeout') || 
+                         apiError.message.includes('exceeded') ||
+                         apiError.message.includes('network') ||
+                         apiError.message.includes('Failed to fetch'))) {
+                        setSuccessMessage('⏳ AI service is taking longer than expected. Still waiting for recommendations...');
+                        // Keep waiting - don't fall back
+                        return; // Exit and keep loading state active
+                    }
+                    
+                    // Real error - break and fall back
+                    break;
                 }
-                
-                // If we get here, API call failed or returned unexpected data
-                console.warn('Hugging Face API call failed or returned unexpected data, falling back to local algorithm');
-                
-            } catch (apiError) {
-                console.warn('Hugging Face API error, falling back to local algorithm:', apiError);
+            }
+            
+            // If we get here after all retries, it's a real error - fall back
+            if (lastError) {
+                console.warn('Real error occurred after retries, falling back to local algorithm');
             }
 
             // Fallback: Use preference-based suggestions that combine preferences with weather
+            // Only reach here if there was a real error (not timeout)
             // This ensures suggestions are personalized based on user preferences AND current weather
             const suggestion = buildPreferenceBasedSuggestion({
                 wardrobeItems,
@@ -1845,20 +1983,20 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     });
 
     const sizeOptions = useMemo(() => {
-        if (data.category === 'Shoes') {
+        if (data.category === 'Shoes' || data.category === 'Boots') {
             return shoeSizes;
         }
-        if (data.category === 'Jeans' || data.category === 'Pants') {
+        if (data.category === 'Jeans' || data.category === 'Pants' || data.category === 'Shorts') {
             return waistSizes;
         }
-        if (data.category === 'Accessories') {
+        if (data.category === 'Accessories' || data.category === 'Hat') {
             return [];
         }
         return apparelSizes;
     }, [data.category]);
 
     useEffect(() => {
-        if (data.category === 'Accessories') {
+        if (data.category === 'Accessories' || data.category === 'Hat') {
             setData('size', '');
             return;
         }
@@ -1941,8 +2079,9 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     const handleUpdateItem = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingItem) {
-            // Validate required fields
-            if (!data.name.trim() || !data.brand.trim() || !data.category || !data.color || !data.size) {
+            // Validate required fields (size is optional for Hat and Accessories)
+            const requiresSize = data.category !== 'Hat' && data.category !== 'Accessories';
+            if (!data.name.trim() || !data.brand.trim() || !data.category || !data.color || (requiresSize && !data.size)) {
                 setSuccessMessage('Please fill in all required fields.');
                 setTimeout(() => setSuccessMessage(null), 3000);
                 return;
@@ -3386,12 +3525,24 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                             </Select>
                                             {errors.color && <p className="text-red-500 text-sm">{errors.color}</p>}
                                         </div>
-                                        {data.category !== 'Accessories' && (
+                                        {data.category !== 'Accessories' && data.category !== 'Hat' && (
                                             <div className="space-y-2">
-                                                <Label htmlFor="item-size">Size *</Label>
+                                                <Label htmlFor="item-size">
+                                                    {data.category === 'Shorts' || data.category === 'Jeans' || data.category === 'Pants' 
+                                                        ? 'Waist Size *' 
+                                                        : data.category === 'Boots' || data.category === 'Shoes'
+                                                        ? 'Shoe Size *'
+                                                        : 'Size *'}
+                                                </Label>
                                                 <Select value={data.size} onValueChange={(value) => setData('size', value)}>
                                                     <SelectTrigger className={errors.size ? 'border-red-500' : ''}>
-                                                        <SelectValue placeholder="Select size" />
+                                                        <SelectValue placeholder={
+                                                            data.category === 'Shorts' || data.category === 'Jeans' || data.category === 'Pants'
+                                                                ? 'Select waist size'
+                                                                : data.category === 'Boots' || data.category === 'Shoes'
+                                                                ? 'Select shoe size'
+                                                                : 'Select size'
+                                                        } />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {sizeOptions.map((size) => (

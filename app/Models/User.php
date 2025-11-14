@@ -93,4 +93,20 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Product::class, 'favorites')->withTimestamps();
     }
+
+    /**
+     * Notifications for this user.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Unread notifications for this user.
+     */
+    public function unreadNotifications()
+    {
+        return $this->hasMany(Notification::class)->unread();
+    }
 }

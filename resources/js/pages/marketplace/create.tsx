@@ -65,6 +65,8 @@ const defaultCategories = [
 export default function SellItem({ categories }: SellItemPageProps) {
     const [images, setImages] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
 
     const effectiveCategories: string[] = Array.from(
         new Set([
@@ -85,9 +87,161 @@ export default function SellItem({ categories }: SellItemPageProps) {
         images: [] as File[],
     });
 
+    // Validation function
+    const validateField = (field: string, value: any): string => {
+        const normalizedCategory = data.category?.toLowerCase();
+        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat' && normalizedCategory !== 'hats';
+
+        switch (field) {
+            case 'title':
+                if (!value || !value.trim()) {
+                    return 'Product title is required';
+                }
+                if (value.trim().length < 3) {
+                    return 'Product title must be at least 3 characters';
+                }
+                if (value.trim().length > 255) {
+                    return 'Product title must not exceed 255 characters';
+                }
+                return '';
+            case 'description':
+                if (!value || !value.trim()) {
+                    return 'Product description is required';
+                }
+                if (value.trim().length < 10) {
+                    return 'Product description must be at least 10 characters';
+                }
+                if (value.trim().length > 5000) {
+                    return 'Product description must not exceed 5000 characters';
+                }
+                return '';
+            case 'price':
+                if (!value || value === '') {
+                    return 'Price is required';
+                }
+                const priceNum = parseInt(value, 10);
+                if (isNaN(priceNum) || priceNum < 1) {
+                    return 'Price must be at least ₱1';
+                }
+                if (priceNum > 10000000) {
+                    return 'Price must not exceed ₱10,000,000';
+                }
+                return '';
+            case 'category':
+                if (!value || value === '') {
+                    return 'Category is required';
+                }
+                return '';
+            case 'size':
+                if (requiresSize && (!value || value === '')) {
+                    return 'Size is required for this category';
+                }
+                return '';
+            case 'condition':
+                if (!value || value === '') {
+                    return 'Condition is required';
+                }
+                return '';
+            case 'images':
+                if (!value || value.length === 0) {
+                    return 'At least one product image is required';
+                }
+                if (value.length > 5) {
+                    return 'Maximum 5 images allowed';
+                }
+                // Validate file sizes and types
+                for (const file of value) {
+                    if (file.size > 10 * 1024 * 1024) {
+                        return 'Each image must be less than 10MB';
+                    }
+                    if (!file.type.startsWith('image/')) {
+                        return 'Only image files are allowed';
+                    }
+                }
+                return '';
+            case 'brand':
+                if (value && value.length > 100) {
+                    return 'Brand name must not exceed 100 characters';
+                }
+                return '';
+            case 'color':
+                if (value && value.length > 50) {
+                    return 'Color must not exceed 50 characters';
+                }
+                return '';
+            default:
+                return '';
+        }
+    };
+
+    // Validate all fields
+    const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
+        const normalizedCategory = data.category?.toLowerCase();
+        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat' && normalizedCategory !== 'hats';
+        
+        const newErrors: Record<string, string> = {};
+        
+        newErrors.title = validateField('title', data.title);
+        newErrors.description = validateField('description', data.description);
+        newErrors.price = validateField('price', data.price);
+        newErrors.category = validateField('category', data.category);
+        if (requiresSize) {
+            newErrors.size = validateField('size', data.size);
+        }
+        newErrors.condition = validateField('condition', data.condition);
+        newErrors.images = validateField('images', images);
+        newErrors.brand = validateField('brand', data.brand);
+        newErrors.color = validateField('color', data.color);
+
+        setClientErrors(newErrors);
+        const isValid = !Object.values(newErrors).some(error => error !== '');
+        return { isValid, errors: newErrors };
+    };
+
+    // Handle field blur
+    const handleBlur = (field: string) => {
+        setTouched(prev => ({ ...prev, [field]: true }));
+        const error = validateField(field, field === 'images' ? images : data[field as keyof typeof data]);
+        setClientErrors(prev => ({ ...prev, [field]: error }));
+    };
+
+    // Get error message for a field (client-side or server-side)
+    const getFieldError = (field: string): string => {
+        if (touched[field] && clientErrors[field]) {
+            return clientErrors[field];
+        }
+        if (errors[field]) {
+            return Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+        }
+        return '';
+    };
+
+    // Check if field has error
+    const hasError = (field: string): boolean => {
+        return !!(touched[field] && clientErrors[field]) || !!errors[field];
+    };
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        const newImages = [...images, ...files].slice(0, 5); // Max 5 images
+        
+        // Mark images as touched
+        setTouched(prev => ({ ...prev, images: true }));
+        
+        // Validate file types and sizes
+        const validFiles: File[] = [];
+        for (const file of files) {
+            if (!file.type.startsWith('image/')) {
+                setClientErrors(prev => ({ ...prev, images: 'Only image files are allowed' }));
+                continue;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                setClientErrors(prev => ({ ...prev, images: 'Each image must be less than 10MB' }));
+                continue;
+            }
+            validFiles.push(file);
+        }
+        
+        const newImages = [...images, ...validFiles].slice(0, 5); // Max 5 images
         setImages(newImages);
         
         // Create preview URLs
@@ -95,6 +249,10 @@ export default function SellItem({ categories }: SellItemPageProps) {
         setPreviewUrls(newPreviewUrls);
         
         setData('images', newImages);
+        
+        // Validate and clear error if images are valid
+        const error = validateField('images', newImages);
+        setClientErrors(prev => ({ ...prev, images: error }));
     };
 
     const removeImage = (index: number) => {
@@ -104,10 +262,45 @@ export default function SellItem({ categories }: SellItemPageProps) {
         setImages(newImages);
         setPreviewUrls(newPreviewUrls);
         setData('images', newImages);
+        
+        // Revalidate images after removal
+        if (touched.images) {
+            const error = validateField('images', newImages);
+            setClientErrors(prev => ({ ...prev, images: error }));
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Mark all fields as touched
+        const allFields = ['title', 'description', 'price', 'category', 'size', 'condition', 'images', 'brand', 'color'];
+        const newTouched: Record<string, boolean> = {};
+        allFields.forEach(field => {
+            newTouched[field] = true;
+        });
+        setTouched(newTouched);
+        
+        // Validate form
+        const { isValid, errors } = validateForm();
+        
+        if (!isValid) {
+            // Scroll to first error
+            setTimeout(() => {
+                const firstErrorField = Object.keys(errors).find(key => errors[key]);
+                if (firstErrorField) {
+                    const element = document.getElementById(firstErrorField) || 
+                                  document.querySelector(`[name="${firstErrorField}"]`) ||
+                                  document.querySelector(`[aria-label*="${firstErrorField}"]`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        (element as HTMLElement).focus();
+                    }
+                }
+            }, 100);
+            return;
+        }
+        
         post('/marketplace', {
             forceFormData: true,
             onSuccess: () => {
@@ -122,20 +315,28 @@ export default function SellItem({ categories }: SellItemPageProps) {
     const waistSizes = ['W24', 'W26', 'W28', 'W30', 'W32', 'W34', 'W36', 'W38', 'W40', 'W42'];
     const sizeOptions = useMemo(() => {
         const normalized = data.category?.toLowerCase();
-        if (normalized === 'shoes') {
+        if (normalized === 'shoes' || normalized === 'boots') {
             return shoeSizes;
         }
-        if (['pants', 'underwear', 'jeans', 'bottoms'].includes(normalized || '')) {
+        if (['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(normalized || '')) {
             return waistSizes;
+        }
+        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+            return [];
         }
         return apparelSizes;
     }, [data.category]);
 
     useEffect(() => {
+        const normalized = data.category?.toLowerCase();
+        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+            setData('size', '');
+            return;
+        }
         if (data.size && !sizeOptions.includes(data.size)) {
             setData('size', '');
         }
-    }, [data.size, sizeOptions, setData]);
+    }, [data.category, data.size, sizeOptions, setData]);
     const conditions = [
         { value: 'new', label: 'New' },
         { value: 'like_new', label: 'Like New' },
@@ -148,6 +349,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
         const raw = event.target.value;
         if (raw === '') {
             setData('price', '');
+            setClientErrors(prev => ({ ...prev, price: '' }));
             return;
         }
 
@@ -157,9 +359,15 @@ export default function SellItem({ categories }: SellItemPageProps) {
         }
 
         setData('price', numeric.toString());
+        
+        // Clear error if valid
+        if (numeric >= 1 && numeric <= 10000000) {
+            setClientErrors(prev => ({ ...prev, price: '' }));
+        }
     };
 
     const handlePriceBlur = () => {
+        handleBlur('price');
         if (!data.price) {
             return;
         }
@@ -272,8 +480,8 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                             </div>
                                         )}
 
-                                        {errors.images && (
-                                            <p className="text-sm text-red-600">{errors.images}</p>
+                                        {getFieldError('images') && (
+                                            <p className="text-sm text-red-600 dark:text-red-400 mt-2">{getFieldError('images')}</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -293,12 +501,19 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                             <Input
                                                 id="title"
                                                 value={data.title}
-                                                onChange={(e) => setData('title', e.target.value)}
+                                                onChange={(e) => {
+                                                    setData('title', e.target.value);
+                                                    if (touched.title) {
+                                                        const error = validateField('title', e.target.value);
+                                                        setClientErrors(prev => ({ ...prev, title: error }));
+                                                    }
+                                                }}
+                                                onBlur={() => handleBlur('title')}
                                                 placeholder="e.g., Vintage Denim Jacket"
-                                                className="mt-1"
+                                                className={`mt-1 ${hasError('title') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                             />
-                                            {errors.title && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.title}</p>
+                                            {getFieldError('title') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('title')}</p>
                                             )}
                                         </div>
 
@@ -308,12 +523,22 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                             <Textarea
                                                 id="description"
                                                 value={data.description}
-                                                onChange={(e) => setData('description', e.target.value)}
+                                                onChange={(e) => {
+                                                    setData('description', e.target.value);
+                                                    if (touched.description) {
+                                                        const error = validateField('description', e.target.value);
+                                                        setClientErrors(prev => ({ ...prev, description: error }));
+                                                    }
+                                                }}
+                                                onBlur={() => handleBlur('description')}
                                                 placeholder="Describe your item in detail..."
-                                                className="mt-1 min-h-[100px]"
+                                                className={`mt-1 min-h-[100px] ${hasError('description') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                             />
-                                            {errors.description && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.description}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                {data.description.length}/5000 characters
+                                            </p>
+                                            {getFieldError('description') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('description')}</p>
                                             )}
                                         </div>
 
@@ -324,16 +549,16 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                                 id="price"
                                                 type="number"
                                                 value={data.price}
-                                            onChange={handlePriceChange}
-                                            onBlur={handlePriceBlur}
+                                                onChange={handlePriceChange}
+                                                onBlur={handlePriceBlur}
                                                 placeholder="0"
-                                                className="mt-1"
-                                            min={100}
-                                            step={100}
-                                            inputMode="numeric"
+                                                className={`mt-1 ${hasError('price') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                                min={1}
+                                                step={1}
+                                                inputMode="numeric"
                                             />
-                                            {errors.price && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.price}</p>
+                                            {getFieldError('price') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('price')}</p>
                                             )}
                                         </div>
                                     </CardContent>
@@ -348,8 +573,22 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                         {/* Category */}
                                         <div>
                                             <Label htmlFor="category">Category *</Label>
-                                            <Select value={data.category} onValueChange={(value) => setData('category', value)}>
-                                                <SelectTrigger className="mt-1">
+                                            <Select 
+                                                value={data.category} 
+                                                onValueChange={(value) => {
+                                                    setData('category', value);
+                                                    if (touched.category) {
+                                                        const error = validateField('category', value);
+                                                        setClientErrors(prev => ({ ...prev, category: error }));
+                                                    }
+                                                }}
+                                                onOpenChange={(open) => {
+                                                    if (!open) {
+                                                        handleBlur('category');
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className={`mt-1 ${hasError('category') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}>
                                                     <SelectValue placeholder="Select a category" />
                                                 </SelectTrigger>
                                                 <SelectContent className="z-[100]">
@@ -358,8 +597,8 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            {errors.category && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.category}</p>
+                                            {getFieldError('category') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('category')}</p>
                                             )}
                                         </div>
 
@@ -369,12 +608,19 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                             <Input
                                                 id="brand"
                                                 value={data.brand}
-                                                onChange={(e) => setData('brand', e.target.value)}
+                                                onChange={(e) => {
+                                                    setData('brand', e.target.value);
+                                                    if (touched.brand) {
+                                                        const error = validateField('brand', e.target.value);
+                                                        setClientErrors(prev => ({ ...prev, brand: error }));
+                                                    }
+                                                }}
+                                                onBlur={() => handleBlur('brand')}
                                                 placeholder="e.g., Levi's, H&M, Zara"
-                                                className="mt-1"
+                                                className={`mt-1 ${hasError('brand') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                             />
-                                            {errors.brand && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.brand}</p>
+                                            {getFieldError('brand') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('brand')}</p>
                                             )}
                                         </div>
                                     </CardContent>
@@ -387,24 +633,43 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {/* Size */}
-                                        <div>
-                                            <Label>Size *</Label>
-                                            <RadioGroup value={data.size} onValueChange={(value) => setData('size', value)} className="mt-2">
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {sizeOptions.map((size) => (
-                                                        <div key={size} className="flex items-center space-x-2">
-                                                            <RadioGroupItem value={size} id={`size-${size}`} />
-                                                            <Label htmlFor={`size-${size}`} className="text-sm">
-                                                                {size}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
+                                        {data.category && data.category.toLowerCase() !== 'accessories' && data.category.toLowerCase() !== 'hat' && data.category.toLowerCase() !== 'hats' && (
+                                            <div>
+                                                <Label>
+                                                    {['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(data.category?.toLowerCase() || '')
+                                                        ? 'Waist Size *'
+                                                        : ['shoes', 'boots'].includes(data.category?.toLowerCase() || '')
+                                                        ? 'Shoe Size *'
+                                                        : 'Size *'}
+                                                </Label>
+                                                <div>
+                                                <RadioGroup 
+                                                    value={data.size} 
+                                                    onValueChange={(value) => {
+                                                        setData('size', value);
+                                                        setTouched(prev => ({ ...prev, size: true }));
+                                                        const error = validateField('size', value);
+                                                        setClientErrors(prev => ({ ...prev, size: error }));
+                                                    }}
+                                                    className={`mt-2 ${hasError('size') ? 'border-red-500' : ''}`}
+                                                >
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        {sizeOptions.map((size) => (
+                                                            <div key={size} className="flex items-center space-x-2">
+                                                                <RadioGroupItem value={size} id={`size-${size}`} />
+                                                                <Label htmlFor={`size-${size}`} className="text-sm">
+                                                                    {size}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </RadioGroup>
+                                                {getFieldError('size') && (
+                                                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('size')}</p>
+                                                )}
                                                 </div>
-                                            </RadioGroup>
-                                            {errors.size && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.size}</p>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
 
                                         {/* Color */}
                                         <div>
@@ -412,12 +677,19 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                             <Input
                                                 id="color"
                                                 value={data.color}
-                                                onChange={(e) => setData('color', e.target.value)}
+                                                onChange={(e) => {
+                                                    setData('color', e.target.value);
+                                                    if (touched.color) {
+                                                        const error = validateField('color', e.target.value);
+                                                        setClientErrors(prev => ({ ...prev, color: error }));
+                                                    }
+                                                }}
+                                                onBlur={() => handleBlur('color')}
                                                 placeholder="e.g., Blue, Red, Black"
-                                                className="mt-1"
+                                                className={`mt-1 ${hasError('color') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                             />
-                                            {errors.color && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.color}</p>
+                                            {getFieldError('color') && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{getFieldError('color')}</p>
                                             )}
                                         </div>
                                     </CardContent>
@@ -429,7 +701,16 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                         <CardTitle>Condition</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <RadioGroup value={data.condition} onValueChange={(value) => setData('condition', value)}>
+                                        <RadioGroup 
+                                            value={data.condition} 
+                                            onValueChange={(value) => {
+                                                setData('condition', value);
+                                                setTouched(prev => ({ ...prev, condition: true }));
+                                                const error = validateField('condition', value);
+                                                setClientErrors(prev => ({ ...prev, condition: error }));
+                                            }}
+                                            className={hasError('condition') ? 'border-red-500' : ''}
+                                        >
                                             <div className="space-y-3">
                                                 {conditions.map((condition) => (
                                                     <div key={condition.value} className="flex items-center space-x-2">
@@ -441,8 +722,8 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                                 ))}
                                             </div>
                                         </RadioGroup>
-                                        {errors.condition && (
-                                            <p className="text-sm text-red-600 mt-2">{errors.condition}</p>
+                                        {getFieldError('condition') && (
+                                            <p className="text-sm text-red-600 dark:text-red-400 mt-2">{getFieldError('condition')}</p>
                                         )}
                                     </CardContent>
                                 </Card>

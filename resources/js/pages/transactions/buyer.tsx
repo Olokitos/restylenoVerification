@@ -119,10 +119,11 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
     switch (transaction.status) {
       case 'pending_payment':
         return (
-          <Link href={`/transactions/${transaction.id}/submit-payment`}>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Link href={`/transactions/${transaction.id}/submit-payment`} className="w-full sm:w-auto">
+            <Button size="sm" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
               <Upload className="mr-2 h-4 w-4" />
-              Submit Payment
+              <span className="hidden sm:inline">Submit Payment</span>
+              <span className="sm:hidden">Submit</span>
             </Button>
           </Link>
         );
@@ -130,7 +131,7 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
         return (
           <Button 
             size="sm" 
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
             onClick={() => {
               router.post(`/transactions/${transaction.id}/confirm-delivery`, {}, {
                 onSuccess: () => {
@@ -143,15 +144,17 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
             }}
           >
             <Package className="mr-2 h-4 w-4" />
-            Confirm Delivery
+            <span className="hidden sm:inline">Confirm Delivery</span>
+            <span className="sm:hidden">Confirm</span>
           </Button>
         );
       default:
         return (
-          <Link href={`/transactions/${transaction.id}`}>
-            <Button size="sm" variant="outline">
+          <Link href={`/transactions/${transaction.id}`} className="w-full sm:w-auto">
+            <Button size="sm" variant="outline" className="w-full sm:w-auto">
               <Eye className="mr-2 h-4 w-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
+              <span className="sm:hidden">Details</span>
             </Button>
           </Link>
         );
@@ -310,43 +313,44 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
               filteredTransactions.map((transaction) => (
                 <Card key={transaction.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                         {/* Product Image */}
                         <div className="flex-shrink-0">
                           {transaction.product.images[0] ? (
                             <img
                               src={transaction.product.images[0].startsWith('/storage') ? transaction.product.images[0] : `/storage/${transaction.product.images[0]}`}
                               alt={transaction.product.title}
-                              className="w-16 h-16 object-cover rounded-lg"
+                              className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                              <Package className="h-8 w-8 text-gray-400" />
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400" />
                             </div>
                           )}
                         </div>
 
                         {/* Transaction Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                               {transaction.product.title}
                             </h3>
-                            <Badge className={`${getStatusColor(transaction.status)} px-2 py-1 text-xs`}>
+                            <Badge className={`${getStatusColor(transaction.status)} px-2 py-1 text-xs w-fit`}>
                               {getStatusIcon(transaction.status)}
-                              <span className="ml-1">{getStatusLabel(transaction.status)}</span>
+                              <span className="ml-1 hidden sm:inline">{getStatusLabel(transaction.status)}</span>
+                              <span className="ml-1 sm:hidden">{getStatusLabel(transaction.status).split(' ')[0]}</span>
                             </Badge>
                           </div>
                           
-                          <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                            <span>Sold by: {transaction.seller.name}</span>
-                            <span>•</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            <span className="truncate">Sold by: {transaction.seller.name}</span>
+                            <span className="hidden sm:inline">•</span>
                             <span>{formatDate(transaction.created_at)}</span>
                           </div>
                           
-                          <div className="mt-2">
-                            <span className="text-lg font-bold text-green-600">
+                          <div className="mt-1 sm:mt-2">
+                            <span className="text-base sm:text-lg font-bold text-green-600">
                               {formatPrice(transaction.sale_price)}
                             </span>
                           </div>
@@ -354,14 +358,10 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center space-x-2">
-                        {getActionButton(transaction)}
-                        <Link href={`/transactions/${transaction.id}`}>
-                          <Button size="sm" variant="outline">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Details
-                          </Button>
-                        </Link>
+                      <div className="flex items-center justify-end sm:justify-start">
+                        <div className="w-full sm:w-auto">
+                          {getActionButton(transaction)}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -373,12 +373,13 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
           {/* Pagination */}
           {transactions.last_page > 1 && (
             <div className="mt-8 flex justify-center">
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {Array.from({ length: transactions.last_page }, (_, i) => i + 1).map((page) => (
                   <Button
                     key={page}
                     variant={page === transactions.current_page ? "default" : "outline"}
                     size="sm"
+                    className="min-w-[2.5rem]"
                     onClick={() => {
                       // This would handle pagination
                       console.log('Navigate to page:', page);

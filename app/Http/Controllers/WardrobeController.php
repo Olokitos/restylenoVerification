@@ -26,17 +26,25 @@ class WardrobeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:100',
             'brand' => 'required|string|max:50',
             'category' => 'required|string|max:50',
             'color' => 'required|string|max:20',
-            'size' => 'required|string|max:10',
             'fabric' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:200',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ]);
+        ];
+        
+        // Size is optional for Hat and Accessories
+        if (!in_array($request->category, ['Hat', 'Accessories'])) {
+            $rules['size'] = 'required|string|max:10';
+        } else {
+            $rules['size'] = 'nullable|string|max:10';
+        }
+        
+        $request->validate($rules);
 
         $wardrobeItem = new WardrobeItem([
             'user_id' => auth()->id(),
@@ -116,16 +124,24 @@ class WardrobeController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:100',
             'brand' => 'required|string|max:50',
             'category' => 'required|string|max:50',
             'color' => 'required|string|max:20',
-            'size' => 'required|string|max:10',
             'description' => 'nullable|string|max:200',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ]);
+        ];
+        
+        // Size is optional for Hat and Accessories
+        if (!in_array($request->category, ['Hat', 'Accessories'])) {
+            $rules['size'] = 'required|string|max:10';
+        } else {
+            $rules['size'] = 'nullable|string|max:10';
+        }
+        
+        $request->validate($rules);
 
         // Update basic fields
         $wardrobeItem->update([
@@ -295,6 +311,11 @@ class WardrobeController extends Controller
     public function generateAIRecommendations(Request $request)
     {
         try {
+            // Remove execution time limit for this operation - set at the very beginning
+            set_time_limit(0); // Unlimited execution time to allow API to complete
+            ini_set('max_execution_time', 0); // Also set at PHP configuration level
+            ignore_user_abort(true); // Continue processing even if client disconnects
+            
             $request->validate([
                 'wardrobe_items' => 'required|array',
                 'weather' => 'nullable|array',
@@ -336,7 +357,7 @@ class WardrobeController extends Controller
             $apiUrl = 'https://stylique-recomendation.hf.space/gradio_api/call/gradio_recommend';
             
             // Step 1: POST request to initiate prediction
-            $postResponse = Http::timeout(30)
+            $postResponse = Http::timeout(90)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => "Bearer {$hfToken}",
@@ -384,22 +405,32 @@ class WardrobeController extends Controller
                 "https://stylique-recomendation.hf.space/gradio_api/call/gradio_recommend/{$eventId}",
             ];
             
-            // Poll for results (max 90 seconds to account for cold starts)
-            $maxAttempts = 90; // Increased to 90 seconds total
+            // Poll for results (max 5 minutes total to account for cold starts)
+            // Use shorter timeouts for polling requests since we're just checking status
+            $maxAttempts = 60; // 60 attempts with progressive wait times = ~5 minutes max
+            $maxTotalTime = 300; // 5 minutes in seconds
+            $startTime = time();
             $attempt = 0;
             $result = null;
             $currentEndpoint = 0;
 
-            while ($attempt < $maxAttempts) {
-                // Wait progressively longer: 1s first 5 times, then 2s
-                $waitTime = $attempt < 5 ? 1 : 2;
+            while ($attempt < $maxAttempts && (time() - $startTime) < $maxTotalTime) {
+                // Wait progressively longer: 2s first 5 times, then 3s, then 5s
+                if ($attempt < 5) {
+                    $waitTime = 2;
+                } elseif ($attempt < 20) {
+                    $waitTime = 3;
+                } else {
+                    $waitTime = 5;
+                }
                 sleep($waitTime);
                 
                 // Try different endpoint formats if one fails
                 $getUrl = $endpointFormats[$currentEndpoint % count($endpointFormats)];
                 
                 try {
-                    $getResponse = Http::timeout(30) // Increased from 10 to 30 seconds per request
+                    // Use shorter timeout for polling requests (15 seconds) - we're just checking status
+                    $getResponse = Http::timeout(15)
                         ->withHeaders([
                             'Authorization' => "Bearer {$hfToken}",
                             'Accept' => 'application/json',
@@ -489,9 +520,11 @@ class WardrobeController extends Controller
             }
 
             if (!$result) {
+                $elapsedTime = time() - $startTime;
                 Log::error('Hugging Face API timed out waiting for results', [
                     'event_id' => $eventId,
                     'attempts' => $attempt,
+                    'elapsed_seconds' => $elapsedTime,
                     'user_id' => auth()->id()
                 ]);
                 
@@ -530,12 +563,21 @@ class WardrobeController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'user_id' => auth()->id()
             ]);
-
+            
+            // Check if it's a timeout error - provide better error message
+            if (str_contains($e->getMessage(), 'Maximum execution time') || str_contains($e->getMessage(), 'timeout')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'TIMEOUT',
+                    'message' => 'The recommendation service is processing your request. This may take a moment. Please try again in a few seconds.',
+                    'timeout' => true
+                ], 504);
+            }
+            
             return response()->json([
                 'success' => false,
-                'error' => 'INTERNAL_ERROR',
-                'message' => 'An unexpected error occurred',
-                'details' => config('app.debug') ? $e->getMessage() : null
+                'error' => 'GENERAL_ERROR',
+                'message' => 'An error occurred while generating recommendations. Please try again.',
             ], 500);
         }
     }

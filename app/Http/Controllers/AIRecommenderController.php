@@ -20,6 +20,11 @@ class AIRecommenderController extends Controller
     public function getRecommendationsTest(Request $request): JsonResponse
     {
         try {
+            // Remove execution time limit for this operation - set at the very beginning
+            set_time_limit(0); // Unlimited execution time to allow API to complete
+            ini_set('max_execution_time', 0); // Also set at PHP configuration level
+            ignore_user_abort(true); // Continue processing even if client disconnects
+            
             $request->validate([
                 'user_id' => 'required|integer|exists:users,id',
                 'weather' => 'required|array',
@@ -40,11 +45,57 @@ class AIRecommenderController extends Controller
                     'success' => false,
                     'message' => 'No wardrobe items found. Add some items to get recommendations!',
                     'recommendations' => []
-                ]);
+                ], 400);
+            }
+            
+            // Check if user has only one item
+            if ($wardrobeItems->count() === 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You need at least 2 items in your wardrobe to generate outfit recommendations. Add more items to create stylish combinations!',
+                    'recommendations' => [],
+                    'item_count' => 1,
+                    'minimum_required' => 2
+                ], 400);
+            }
+            
+            // Check if items can form a valid outfit combination
+            if (!$this->canFormValidOutfit($wardrobeItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your wardrobe items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom. Please add items from different categories to create outfit combinations!',
+                    'recommendations' => [],
+                    'item_count' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
             }
 
             // Apply weather-based filtering first
             $filteredItems = $this->applyWeatherFiltering($wardrobeItems, $weatherData, $maxRecommendations);
+            
+            // Check if filtered items are less than 2 after weather filtering
+            if ($filteredItems->count() < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, you have fewer than 2 suitable items. Consider adding more items that match the current weather conditions, or try adjusting your preferences.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'minimum_required' => 2,
+                    'total_items' => $wardrobeItems->count()
+                ], 400);
+            }
+            
+            // Check if filtered items can still form a valid outfit combination
+            if (!$this->canFormValidOutfit($filteredItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, your remaining items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom that match the current weather conditions.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'total_items' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
+            }
             
             // Call Hugging Face API for embedding-based recommendations
             $mlRecommendations = $this->getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $user->id, $maxRecommendations);
@@ -71,9 +122,18 @@ class AIRecommenderController extends Controller
         } catch (\Exception $e) {
             Log::error('AI Recommendation Error: ' . $e->getMessage());
             
+            // Check if it's a timeout error - provide better error message
+            if (str_contains($e->getMessage(), 'Maximum execution time') || str_contains($e->getMessage(), 'timeout')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The recommendation service is processing your request. This may take a moment. Please try again in a few seconds.',
+                    'timeout' => true
+                ], 504);
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'An error occurred while generating recommendations. Please try again.',
             ], 500);
         }
     }
@@ -84,6 +144,11 @@ class AIRecommenderController extends Controller
     public function getRecommendations(Request $request): JsonResponse
     {
         try {
+            // Remove execution time limit for this operation - set at the very beginning
+            set_time_limit(0); // Unlimited execution time to allow API to complete
+            ini_set('max_execution_time', 0); // Also set at PHP configuration level
+            ignore_user_abort(true); // Continue processing even if client disconnects
+            
             $request->validate([
                 'weather' => 'required|array',
                 'occasion' => 'nullable|string',
@@ -103,11 +168,57 @@ class AIRecommenderController extends Controller
                     'success' => false,
                     'message' => 'No wardrobe items found. Add some items to get recommendations!',
                     'recommendations' => []
-                ]);
+                ], 400);
+            }
+            
+            // Check if user has only one item
+            if ($wardrobeItems->count() === 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You need at least 2 items in your wardrobe to generate outfit recommendations. Add more items to create stylish combinations!',
+                    'recommendations' => [],
+                    'item_count' => 1,
+                    'minimum_required' => 2
+                ], 400);
+            }
+            
+            // Check if items can form a valid outfit combination
+            if (!$this->canFormValidOutfit($wardrobeItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your wardrobe items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom. Please add items from different categories to create outfit combinations!',
+                    'recommendations' => [],
+                    'item_count' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
             }
 
             // Apply weather-based filtering first
             $filteredItems = $this->applyWeatherFiltering($wardrobeItems, $weatherData, $maxRecommendations);
+            
+            // Check if filtered items are less than 2 after weather filtering
+            if ($filteredItems->count() < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, you have fewer than 2 suitable items. Consider adding more items that match the current weather conditions, or try adjusting your preferences.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'minimum_required' => 2,
+                    'total_items' => $wardrobeItems->count()
+                ], 400);
+            }
+            
+            // Check if filtered items can still form a valid outfit combination
+            if (!$this->canFormValidOutfit($filteredItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, your remaining items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom that match the current weather conditions.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'total_items' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
+            }
             
             // Get user's saved outfits for context
             $savedOutfits = SavedOutfit::where('user_id', $user->id)
@@ -164,8 +275,80 @@ class AIRecommenderController extends Controller
                 'total_items_considered' => $filteredItems->count(),
             ]);
 
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('AI Recommendation Connection Timeout: ' . $e->getMessage());
+            
+            // Fallback to local recommendations instead of showing error
+            $weatherData = $request->input('weather', []);
+            $maxRecommendations = $request->input('max_recommendations', 6);
+            $wardrobeItems = WardrobeItem::where('user_id', auth()->id())->get();
+            
+            if ($wardrobeItems->isEmpty() || $wardrobeItems->count() < 2 || !$this->canFormValidOutfit($wardrobeItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The AI recommendation service is currently unavailable. Please ensure you have at least 2 items that can form a complete outfit combination.',
+                    'recommendations' => [],
+                    'timeout' => true
+                ], 504);
+            }
+            
+            $filteredItems = $this->applyWeatherFiltering($wardrobeItems, $weatherData);
+            if ($filteredItems->count() < 2 || !$this->canFormValidOutfit($filteredItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The AI recommendation service is currently unavailable. Please ensure you have items that match the current weather conditions.',
+                    'recommendations' => [],
+                    'timeout' => true
+                ], 504);
+            }
+            
+            $recommendations = $this->generateWeatherBasedRecommendations($filteredItems, $weatherData, $maxRecommendations);
+            
+            return response()->json([
+                'success' => true,
+                'recommendations' => $recommendations,
+                'ml_confidence' => 0.3,
+                'fallback' => true,
+                'message' => 'Using local recommendations (AI service unavailable)',
+            ]);
         } catch (\Exception $e) {
             Log::error('AI Recommendation Error: ' . $e->getMessage());
+            
+            // Check if it's a timeout error - fallback to local recommendations
+            if (str_contains($e->getMessage(), 'Maximum execution time') || str_contains($e->getMessage(), 'timeout')) {
+                $weatherData = $request->input('weather', []);
+                $maxRecommendations = $request->input('max_recommendations', 6);
+                $wardrobeItems = WardrobeItem::where('user_id', auth()->id())->get();
+                
+                if ($wardrobeItems->isEmpty() || $wardrobeItems->count() < 2 || !$this->canFormValidOutfit($wardrobeItems)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The recommendation request is taking longer than expected. Please ensure you have at least 2 items that can form a complete outfit combination.',
+                        'recommendations' => [],
+                        'timeout' => true
+                    ], 504);
+                }
+                
+                $filteredItems = $this->applyWeatherFiltering($wardrobeItems, $weatherData);
+                if ($filteredItems->count() < 2 || !$this->canFormValidOutfit($filteredItems)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The recommendation request is taking longer than expected. Please ensure you have items that match the current weather conditions.',
+                        'recommendations' => [],
+                        'timeout' => true
+                    ], 504);
+                }
+                
+                $recommendations = $this->generateWeatherBasedRecommendations($filteredItems, $weatherData, $maxRecommendations);
+                
+                return response()->json([
+                    'success' => true,
+                    'recommendations' => $recommendations,
+                    'ml_confidence' => 0.3,
+                    'fallback' => true,
+                    'message' => 'Using local recommendations (AI service timeout)',
+                ]);
+            }
             
             // Fallback to basic weather recommendations
             $weatherData = $request->input('weather', []);
@@ -177,10 +360,57 @@ class AIRecommenderController extends Controller
                     'success' => false,
                     'message' => 'No wardrobe items found. Add some items to get recommendations!',
                     'recommendations' => []
-                ]);
+                ], 400);
+            }
+            
+            // Check if user has only one item
+            if ($wardrobeItems->count() === 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You need at least 2 items in your wardrobe to generate outfit recommendations. Add more items to create stylish combinations!',
+                    'recommendations' => [],
+                    'item_count' => 1,
+                    'minimum_required' => 2
+                ], 400);
+            }
+            
+            // Check if items can form a valid outfit combination
+            if (!$this->canFormValidOutfit($wardrobeItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your wardrobe items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom. Please add items from different categories to create outfit combinations!',
+                    'recommendations' => [],
+                    'item_count' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
             }
             
             $filteredItems = $this->applyWeatherFiltering($wardrobeItems, $weatherData);
+            
+            // Check if filtered items are less than 2 after weather filtering
+            if ($filteredItems->count() < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, you have fewer than 2 suitable items. Consider adding more items that match the current weather conditions.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'minimum_required' => 2,
+                    'total_items' => $wardrobeItems->count()
+                ], 400);
+            }
+            
+            // Check if filtered items can still form a valid outfit combination
+            if (!$this->canFormValidOutfit($filteredItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'After applying weather filters, your remaining items cannot form a complete outfit combination. You need either: (1) a dress, OR (2) at least one top AND one bottom that match the current weather conditions.',
+                    'recommendations' => [],
+                    'item_count' => $filteredItems->count(),
+                    'total_items' => $wardrobeItems->count(),
+                    'requires_combination' => true
+                ], 400);
+            }
+            
             $recommendations = $this->generateWeatherBasedRecommendations($filteredItems, $weatherData, $maxRecommendations);
             
             return response()->json([
@@ -339,6 +569,50 @@ class AIRecommenderController extends Controller
                 'message' => 'Failed to submit feedback. Please try again.',
             ], 500);
         }
+    }
+
+    /**
+     * Check if wardrobe items can form a valid outfit combination
+     * A valid outfit needs either:
+     * - A dress (standalone outfit), OR
+     * - At least one top AND one bottom
+     */
+    private function canFormValidOutfit($wardrobeItems): bool
+    {
+        if ($wardrobeItems->count() < 2) {
+            return false;
+        }
+
+        $hasDress = false;
+        $hasTop = false;
+        $hasBottom = false;
+
+        foreach ($wardrobeItems as $item) {
+            $category = strtolower($item->category ?? '');
+            
+            // Check for dresses (standalone outfits)
+            if (str_contains($category, 'dress') || str_contains($category, 'romper') || str_contains($category, 'jumpsuit')) {
+                $hasDress = true;
+            }
+            
+            // Check for tops
+            if (str_contains($category, 'top') || str_contains($category, 'shirt') || 
+                str_contains($category, 't-shirt') || str_contains($category, 'blouse') || 
+                str_contains($category, 'tank') || str_contains($category, 'sweater') || 
+                str_contains($category, 'hoodie')) {
+                $hasTop = true;
+            }
+            
+            // Check for bottoms
+            if (str_contains($category, 'bottom') || str_contains($category, 'pants') || 
+                str_contains($category, 'jeans') || str_contains($category, 'shorts') || 
+                str_contains($category, 'skirt') || str_contains($category, 'legging')) {
+                $hasBottom = true;
+            }
+        }
+
+        // Valid outfit if: has a dress OR (has top AND has bottom)
+        return $hasDress || ($hasTop && $hasBottom);
     }
 
     /**
@@ -541,10 +815,11 @@ class AIRecommenderController extends Controller
             ]);
 
             // For embedding models, send the inputs as an array of texts
+            // Use longer timeout to allow API to complete (up to 90 seconds)
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post($modelUrl, [
+            ])->timeout(90)->post($modelUrl, [
                 'inputs' => $texts,
             ]);
 
@@ -563,6 +838,9 @@ class AIRecommenderController extends Controller
                 return null;
             }
 
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::warning('Hugging Face Embedding API Connection Timeout: ' . $e->getMessage());
+            return null;
         } catch (\Exception $e) {
             Log::error('Hugging Face Embedding API Exception: ' . $e->getMessage());
             return null;
@@ -624,10 +902,11 @@ class AIRecommenderController extends Controller
                 'data_keys' => array_keys($data)
             ]);
 
+            // Use longer timeout to allow API to complete (up to 90 seconds)
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post($modelUrl, $data);
+            ])->timeout(90)->post($modelUrl, $data);
 
             if ($response->successful()) {
                 return $response->json();
@@ -636,6 +915,9 @@ class AIRecommenderController extends Controller
                 return null;
             }
 
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::warning('Hugging Face API Connection Timeout: ' . $e->getMessage());
+            return null;
         } catch (\Exception $e) {
             Log::error('Hugging Face API Exception: ' . $e->getMessage());
             return null;

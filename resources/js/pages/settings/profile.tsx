@@ -5,7 +5,7 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import React, { useRef, useState } from 'react';
-import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Bell, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon, CreditCard } from 'lucide-react';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -154,13 +154,6 @@ export default function Profile({
             
             img.src = objectUrl;
         }
-    };
-
-    const handleNotificationSettings = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Navigate to notification settings (placeholder for now)
-        alert('Notification Settings\n\nThis feature is coming soon! You will be able to manage your email notifications, push notifications, and other alert preferences here.');
     };
 
     const handleAppearance = (e: React.MouseEvent) => {
@@ -811,15 +804,6 @@ export default function Profile({
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Button 
-                                    type="button"
-                                    variant="outline" 
-                                    className="w-full justify-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                                    onClick={handleNotificationSettings}
-                                >
-                                    <Bell className="mr-2 h-4 w-4" />
-                                    Notification Settings
-                                </Button>
                                 <Button 
                                     type="button"
                                     variant="outline" 

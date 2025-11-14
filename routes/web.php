@@ -223,6 +223,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('user-preferences', [App\Http\Controllers\AIRecommenderController::class, 'saveUserPreferences'])->name('api.user-preferences.save');
         Route::post('ratings', [RatingController::class, 'store'])->name('api.ratings.store');
         
+        // Notification routes
+        Route::get('notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');
+        Route::get('notifications/unread-count', [App\Http\Controllers\Api\NotificationController::class, 'unreadCount'])->name('api.notifications.unread-count');
+        Route::post('notifications/{notification}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->name('api.notifications.mark-read');
+        Route::post('notifications/mark-all-read', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead'])->name('api.notifications.mark-all-read');
+        Route::delete('notifications/{notification}', [App\Http\Controllers\Api\NotificationController::class, 'destroy'])->name('api.notifications.destroy');
+        Route::delete('notifications/read/all', [App\Http\Controllers\Api\NotificationController::class, 'deleteAllRead'])->name('api.notifications.delete-all-read');
+        
         // Test Dashboard API Routes
         Route::post('run-tests', [App\Http\Controllers\TestDashboardController::class, 'runTests'])->name('api.run-tests');
         Route::get('test-results', [App\Http\Controllers\TestDashboardController::class, 'getResults'])->name('api.test-results');

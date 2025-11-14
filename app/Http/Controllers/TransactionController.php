@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Models\Product;
 use App\Models\CommissionRecord;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -177,7 +178,7 @@ class TransactionController extends Controller
         }
 
         $pendingTransactions = Transaction::with(['product', 'buyer', 'seller'])
-            ->whereIn('status', ['payment_submitted', 'payment_verified', 'shipped'])
+            ->whereIn('status', ['payment_submitted', 'payment_verified', 'shipped', 'delivered'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
@@ -200,6 +201,14 @@ class TransactionController extends Controller
             'payment_collected_by_platform' => true,
             'platform_payment_collected_at' => now(),
         ]);
+
+        // Notify seller that payment is verified and they can ship
+        NotificationService::transaction(
+            $transaction->seller,
+            'Payment Verified',
+            "Payment for your product '{$transaction->product->title}' has been verified. You can now ship the item.",
+            $transaction
+        );
 
         \Log::info('Platform payment verified and collected', [
             'transaction_id' => $transaction->id,
@@ -291,6 +300,14 @@ class TransactionController extends Controller
             'shipping_proof_path' => $imagePath,
         ]);
 
+        // Notify buyer that product has been shipped
+        NotificationService::transaction(
+            $transaction->buyer,
+            'Product Shipped',
+            "Your order '{$transaction->product->title}' has been shipped!",
+            $transaction
+        );
+
         return redirect()->back()->with('success', 'Product marked as shipped successfully!');
     }
 
@@ -320,10 +337,18 @@ class TransactionController extends Controller
             'delivery_proof_path' => $transaction->delivery_proof_path ?? $transaction->delivery_proof_path,
         ]);
 
-        // Auto-complete transaction
-        $this->complete($transaction);
+        // Notify admin that product is delivered and ready for payout
+        $admin = \App\Models\User::where('is_admin', true)->first();
+        if ($admin) {
+            NotificationService::transaction(
+                $admin,
+                'Product Delivered Successfully',
+                "Product '{$transaction->product->title}' has been delivered successfully. Ready for seller payout.",
+                $transaction
+            );
+        }
 
-        return redirect()->back()->with('success', 'Delivery confirmed! Transaction completed successfully.');
+        return redirect()->back()->with('success', 'Delivery confirmed! Admin will process the seller payout.');
     }
 
     /**
@@ -366,6 +391,22 @@ class TransactionController extends Controller
 
         // Mark product as sold
         $transaction->product->update(['status' => 'sold']);
+
+        // Notify seller that transaction is completed and payment released
+        NotificationService::transaction(
+            $transaction->seller,
+            'Transaction Completed',
+            "Your sale of '{$transaction->product->title}' is complete! Payment of ₱{$transaction->seller_earnings} has been released.",
+            $transaction
+        );
+
+        // Notify buyer that transaction is completed
+        NotificationService::transaction(
+            $transaction->buyer,
+            'Transaction Completed',
+            "Your purchase of '{$transaction->product->title}' is complete! You can now rate the seller.",
+            $transaction
+        );
 
         \Log::info('Transaction completed with seller payout', [
             'transaction_id' => $transaction->id,

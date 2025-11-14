@@ -22,6 +22,7 @@ interface Transaction {
   platform_payment_reference: string;
   payment_proof_path: string;
   shipping_proof_path?: string | null;
+  delivery_proof_path?: string | null;
   payout_proof_path?: string | null;
   payment_collected_by_platform?: boolean;
   status: string;
@@ -205,8 +206,8 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
               transactions.data.map((transaction) => (
                 <Card key={transaction.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 flex-1">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                         {/* Product Image */}
                         <div className="flex-shrink-0">
                           {transaction.product.images[0] ? (
@@ -215,19 +216,19 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                                 ? transaction.product.images[0]
                                 : `/storage/${transaction.product.images[0]}`}
                               alt={transaction.product.title}
-                              className="w-16 h-16 object-cover rounded-lg"
+                              className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                              <Package className="h-8 w-8 text-gray-400" />
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400" />
                             </div>
                           )}
                         </div>
 
                         {/* Transaction Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                               {transaction.product.title}
                             </h3>
                             <Badge className={
@@ -235,42 +236,68 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                                 ? 'bg-yellow-100 text-yellow-800' 
                                 : transaction.status === 'payment_verified'
                                 ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
+                                : transaction.status === 'shipped'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-green-100 text-green-800'
                             }>
-                              <Clock className="h-3 w-3 mr-1" />
-                              {transaction.status === 'payment_submitted' 
-                                ? 'PENDING VERIFICATION'
-                                : transaction.status === 'payment_verified'
-                                ? 'READY TO COMPLETE'
-                                : 'SHIPPED - READY TO COMPLETE'
-                              }
+                              {transaction.status === 'payment_submitted' ? (
+                                <>
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span className="hidden sm:inline">PENDING VERIFICATION</span>
+                                  <span className="sm:hidden">PENDING</span>
+                                </>
+                              ) : transaction.status === 'payment_verified' ? (
+                                <>
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span className="hidden sm:inline">READY TO COMPLETE</span>
+                                  <span className="sm:hidden">READY</span>
+                                </>
+                              ) : transaction.status === 'shipped' ? (
+                                <>
+                                  <Package className="h-3 w-3 mr-1" />
+                                  <span className="hidden sm:inline">SHIPPED - READY TO COMPLETE</span>
+                                  <span className="sm:hidden">SHIPPED</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  <span className="hidden sm:inline">DELIVERED - READY FOR PAYOUT</span>
+                                  <span className="sm:hidden">DELIVERED</span>
+                                </>
+                              )}
                             </Badge>
                           </div>
                           
-                          <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
                             <div className="flex items-center space-x-1">
-                              <User className="h-4 w-4" />
-                              <span>Buyer: {transaction.buyer.name}</span>
+                              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="truncate">Buyer: {transaction.buyer.name}</span>
                             </div>
-                            <span>•</span>
+                            <span className="hidden sm:inline">•</span>
                             <div className="flex items-center space-x-1">
-                              <User className="h-4 w-4" />
-                              <span>Seller: {transaction.seller.name}</span>
+                              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="truncate">Seller: {transaction.seller.name}</span>
                             </div>
                           </div>
                           
                           <div className="mt-2 space-y-1">
-                            <div className="flex items-center space-x-4 text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Amount:</span>
-                              <span className="font-semibold">{formatPrice(transaction.sale_price)}</span>
-                              <span className="text-gray-600 dark:text-gray-400">•</span>
-                              <span className="text-gray-600 dark:text-gray-400">Commission:</span>
-                              <span className="font-semibold text-green-600">{formatPrice(transaction.commission_amount)}</span>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm">
+                              <div className="flex items-center space-x-1">
+                                <span className="text-gray-600 dark:text-gray-400">Amount:</span>
+                                <span className="font-semibold">{formatPrice(transaction.sale_price)}</span>
+                              </div>
+                              <span className="hidden sm:inline text-gray-600 dark:text-gray-400">•</span>
+                              <div className="flex items-center space-x-1">
+                                <span className="text-gray-600 dark:text-gray-400">Commission:</span>
+                                <span className="font-semibold text-green-600">{formatPrice(transaction.commission_amount)}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-4 text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Reference:</span>
-                              <span className="font-mono text-blue-600">{transaction.platform_payment_reference}</span>
-                              <span className="text-gray-600 dark:text-gray-400">•</span>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm">
+                              <div className="flex items-center space-x-1 min-w-0">
+                                <span className="text-gray-600 dark:text-gray-400">Ref:</span>
+                                <span className="font-mono text-blue-600 truncate">{transaction.platform_payment_reference}</span>
+                              </div>
+                              <span className="hidden sm:inline text-gray-600 dark:text-gray-400">•</span>
                               <span className="text-gray-600 dark:text-gray-400">{formatDate(transaction.created_at)}</span>
                             </div>
                           </div>
@@ -278,18 +305,19 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-wrap items-center gap-2 justify-end sm:justify-start">
+                      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:justify-end">
                         {transaction.status === 'payment_submitted' && (
                           <Button
                             onClick={() => handleVerifyPayment(transaction.id)}
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
-                            Verify Payment
+                            <span className="hidden sm:inline">Verify Payment</span>
+                            <span className="sm:hidden">Verify</span>
                           </Button>
                         )}
-                        {(transaction.status === 'payment_verified' || transaction.status === 'shipped') && !transaction.payment_collected_by_platform && (
+                        {(transaction.status === 'payment_verified' || transaction.status === 'shipped' || transaction.status === 'delivered') && !transaction.payment_collected_by_platform && (
                           <Button
                             onClick={() => {
                               if (confirm('Mark payment as collected by the platform?')) {
@@ -299,40 +327,49 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                               }
                             }}
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
-                            Mark Payment Collected
+                            <span className="hidden sm:inline">Mark Payment Collected</span>
+                            <span className="sm:hidden">Mark Collected</span>
                           </Button>
                         )}
-                        {(transaction.status === 'payment_verified' || transaction.status === 'shipped') ? (
+                        {(transaction.status === 'payment_verified' || transaction.status === 'shipped' || transaction.status === 'delivered') && (
                           <Button
                             onClick={() => {
                               if (!transaction.payment_collected_by_platform) {
                                 alert('Collect the payment first before completing this transaction.');
                                 return;
                               }
-                              if (confirm('Complete this transaction? This will record the commission and finalize the sale.')) {
+                              if (confirm('Complete this transaction and process seller payout? This will record the commission and finalize the sale.')) {
                                 router.post(`/admin/transactions/${transaction.id}/admin-complete`, undefined, {
                                   preserveScroll: true,
                                 });
                               }
                             }}
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className={`w-full sm:w-auto ${transaction.status === 'delivered' 
+                              ? 'bg-green-600 hover:bg-green-700 text-white' 
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                             disabled={!transaction.payment_collected_by_platform}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
-                            Complete Transaction
+                            <span className="hidden sm:inline">
+                              {transaction.status === 'delivered' ? 'Process Seller Payout' : 'Complete Transaction'}
+                            </span>
+                            <span className="sm:hidden">
+                              {transaction.status === 'delivered' ? 'Process Payout' : 'Complete'}
+                            </span>
                           </Button>
-                        ) : null}
-                        <Link href={`/transactions/${transaction.id}`}>
-                          <Button variant="outline" size="sm">
+                        )}
+                        <Link href={`/transactions/${transaction.id}`} className="w-full sm:w-auto">
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
                             <Eye className="mr-2 h-4 w-4" />
-                            View Details
+                            <span className="hidden sm:inline">View Details</span>
+                            <span className="sm:hidden">Details</span>
                           </Button>
                         </Link>
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                           <input
                             id={`payout-proof-${transaction.id}`}
                             type="file"
@@ -351,15 +388,17 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                             variant="outline"
                             disabled={!transaction.payment_collected_by_platform}
                             size="sm"
+                            className="w-full sm:w-auto"
                             onClick={() => {
                               const input = document.getElementById(`payout-proof-${transaction.id}`) as HTMLInputElement | null;
                               input?.click();
                             }}
                           >
-                            Upload Payout Proof
+                            <span className="hidden sm:inline">Upload Payout Proof</span>
+                            <span className="sm:hidden">Upload Proof</span>
                           </Button>
                           {!transaction.payment_collected_by_platform && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enable after platform collects payment.</p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Enable after platform collects payment.</p>
                           )}
                         </div>
                       </div>
@@ -392,6 +431,26 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                             transaction.shipping_proof_path.startsWith('/storage')
                               ? transaction.shipping_proof_path
                               : `/storage/${transaction.shipping_proof_path}`,
+                            '_blank'
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Delivery Proof Preview */}
+                    {transaction.delivery_proof_path && (
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Delivery Proof:</p>
+                        <img
+                          src={transaction.delivery_proof_path.startsWith('/storage')
+                            ? transaction.delivery_proof_path
+                            : `/storage/${transaction.delivery_proof_path}`}
+                          alt="Delivery proof"
+                          className="w-full max-w-md rounded-lg border cursor-pointer"
+                          onClick={() => window.open(
+                            transaction.delivery_proof_path.startsWith('/storage')
+                              ? transaction.delivery_proof_path
+                              : `/storage/${transaction.delivery_proof_path}`,
                             '_blank'
                           )}
                         />

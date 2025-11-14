@@ -210,17 +210,17 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                 {/* Admin Actions */}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* User Management */}
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+                    <div className="group relative overflow-hidden bg-white dark:bg-white/10 backdrop-blur-sm border border-gray-200 dark:border-white/20 rounded-2xl p-6 hover:bg-gray-50 dark:hover:bg-white/15 transition-all duration-300 hover:scale-105">
                         <div className="flex items-center space-x-4 mb-6">
                             <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                                 <Users className="h-7 w-7 text-white" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white">User Management</h3>
-                                <p className="text-sm text-white/60">Manage user accounts and permissions</p>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">User Management</h3>
+                                <p className="text-sm text-gray-600 dark:text-white/60">Manage user accounts and permissions</p>
                             </div>
                         </div>
-                        <p className="text-sm text-white/70 mb-6 leading-relaxed">
+                        <p className="text-sm text-gray-700 dark:text-white/70 mb-6 leading-relaxed">
                             View, edit, and manage user accounts. Update user information, reset passwords, and delete accounts.
                         </p>
                         <Link href="/admin/users">
@@ -232,17 +232,17 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                     </div>
 
                     {/* Transaction Management */}
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+                    <div className="group relative overflow-hidden bg-white dark:bg-white/10 backdrop-blur-sm border border-gray-200 dark:border-white/20 rounded-2xl p-6 hover:bg-gray-50 dark:hover:bg-white/15 transition-all duration-300 hover:scale-105">
                         <div className="flex items-center space-x-4 mb-6">
                             <div className="w-14 h-14 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center">
                                 <Clock className="h-7 w-7 text-white" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white">Transaction Management</h3>
-                                <p className="text-sm text-white/60">Monitor and manage transactions</p>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Transaction Management</h3>
+                                <p className="text-sm text-gray-600 dark:text-white/60">Monitor and manage transactions</p>
                             </div>
                         </div>
-                        <p className="text-sm text-white/70 mb-6 leading-relaxed">
+                        <p className="text-sm text-gray-700 dark:text-white/70 mb-6 leading-relaxed">
                             Review pending payments, verify transactions, and manage the escrow system.
                         </p>
                         <Link href="/admin/transactions/pending-payments">
@@ -254,17 +254,17 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                     </div>
 
                     {/* Commission Management */}
-                    <div className="group relative overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+                    <div className="group relative overflow-hidden bg-white dark:bg-white/10 backdrop-blur-sm border border-gray-200 dark:border-white/20 rounded-2xl p-6 hover:bg-gray-50 dark:hover:bg-white/15 transition-all duration-300 hover:scale-105">
                         <div className="flex items-center space-x-4 mb-6">
                             <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
                                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-lg font-bold text-white">₱</span>
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white">Commission Management</h3>
-                                <p className="text-sm text-white/60">Track platform earnings</p>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Commission Management</h3>
+                                <p className="text-sm text-gray-600 dark:text-white/60">Track platform earnings</p>
                             </div>
                         </div>
-                        <p className="text-sm text-white/70 mb-6 leading-relaxed">
+                        <p className="text-sm text-gray-700 dark:text-white/70 mb-6 leading-relaxed">
                             Monitor commission earnings, generate reports, and track financial performance.
                         </p>
                         <div className="space-y-3">
@@ -275,7 +275,7 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                                 </Button>
                             </Link>
                             <Link href="/admin/commissions/report">
-                                <Button className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-xl py-3 font-semibold transition-all duration-300">
+                                <Button className="w-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-300 dark:border-white/30 rounded-xl py-3 font-semibold transition-all duration-300">
                                     <BarChart3 className="mr-2 h-4 w-4" />
                                     Generate Report
                                 </Button>
@@ -285,24 +285,24 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8">
+                <div className="bg-white dark:bg-white/10 backdrop-blur-sm border border-gray-200 dark:border-white/20 rounded-2xl p-8">
                     <div className="flex items-center space-x-4 mb-8">
                         <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
                             <Activity className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-bold text-white">Recent Activity</h3>
-                            <p className="text-white/60">Latest system and user activity</p>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                            <p className="text-gray-600 dark:text-white/60">Latest system and user activity</p>
                         </div>
                     </div>
                     {recentActivity.length === 0 ? (
                         <div className="flex items-center justify-center h-40">
                             <div className="text-center">
-                                <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <Activity className="h-10 w-10 text-white/40" />
+                                <div className="w-20 h-20 bg-gray-100 dark:bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <Activity className="h-10 w-10 text-gray-400 dark:text-white/40" />
                                 </div>
-                                <p className="text-xl font-semibold text-white mb-2">No recent activity</p>
-                                <p className="text-white/60">Activity will appear here as users interact with the platform.</p>
+                                <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No recent activity</p>
+                                <p className="text-gray-600 dark:text-white/60">Activity will appear here as users interact with the platform.</p>
                             </div>
                         </div>
                     ) : (
@@ -316,7 +316,7 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                                     <Link
                                         key={`${activity.type}-${activity.id}`}
                                         href={`/transactions/${transactionId}`}
-                                        className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 border border-white/10 cursor-pointer group"
+                                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-all duration-200 border border-gray-200 dark:border-white/10 cursor-pointer group"
                                     >
                                         <div className="flex items-center space-x-4 flex-1">
                                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -332,30 +332,30 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center space-x-2">
-                                                    <p className="font-semibold text-white text-sm truncate group-hover:text-white/90">
+                                                    <p className="font-semibold text-gray-900 dark:text-white text-sm truncate group-hover:text-gray-700 dark:group-hover:text-white/90">
                                                         {activity.product_title}
                                                     </p>
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                                         activity.type === 'commission'
-                                                            ? 'bg-green-500/20 text-green-300'
-                                                            : 'bg-blue-500/20 text-blue-300'
+                                                            ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300'
+                                                            : 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
                                                     }`}>
                                                         {activity.type === 'commission' ? 'Commission' : 'Sale'}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-white/60 mt-1">
+                                                <p className="text-xs text-gray-600 dark:text-white/60 mt-1">
                                                     {activity.buyer_name} → {activity.seller_name}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="text-right ml-4">
-                                            <p className="font-semibold text-white text-sm">
+                                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
                                                 {activity.type === 'commission' 
                                                     ? formatPrice(activity.amount || 0)
                                                     : formatPrice(activity.sale_price || 0)
                                                 }
                                             </p>
-                                            <p className="text-xs text-white/50 mt-1">
+                                            <p className="text-xs text-gray-500 dark:text-white/50 mt-1">
                                                 {formatDate(activity.date)}
                                             </p>
                                         </div>
@@ -367,21 +367,21 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8">
+                <div className="bg-white dark:bg-white/10 backdrop-blur-sm border border-gray-200 dark:border-white/20 rounded-2xl p-8">
                     <div className="flex items-center space-x-4 mb-8">
                         <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
                             <TrendingUp className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-bold text-white">Quick Actions</h3>
-                            <p className="text-white/60">Common administrative tasks</p>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h3>
+                            <p className="text-gray-600 dark:text-white/60">Common administrative tasks</p>
                         </div>
                     </div>
                     <div className="grid gap-6 md:grid-cols-3">
                         <Button 
                             type="button"
                             onClick={handleVerifyUsers}
-                            className="h-24 flex-col bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                            className="h-24 flex-col bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-300 dark:border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
                         >
                             <UserCheck className="h-8 w-8 mb-3" />
                             <span className="font-semibold">Verify Users</span>
@@ -389,7 +389,7 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                         <Button 
                             type="button"
                             onClick={handleSecurityAudit}
-                            className="h-24 flex-col bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                            className="h-24 flex-col bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-300 dark:border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
                         >
                             <Shield className="h-8 w-8 mb-3" />
                             <span className="font-semibold">Security Audit</span>
@@ -397,7 +397,7 @@ export default function AdminDashboard({ stats, recentActivity = [] }: AdminDash
                         <Button 
                             type="button"
                             onClick={handleGenerateReport}
-                            className="h-24 flex-col bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                            className="h-24 flex-col bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-300 dark:border-white/30 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
                         >
                             <BarChart3 className="h-8 w-8 mb-3" />
                             <span className="font-semibold">Generate Report</span>

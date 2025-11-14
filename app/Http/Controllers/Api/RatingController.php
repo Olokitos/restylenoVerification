@@ -7,6 +7,7 @@ use App\Http\Resources\RatingResource;
 use App\Models\Rating;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -48,6 +49,15 @@ class RatingController extends Controller
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
         ]);
+
+        // Notify seller about the new rating
+        NotificationService::rating(
+            $transaction->seller,
+            'New Rating Received',
+            "You received a {$validated['rating']}-star rating from {$transaction->buyer->name} for '{$transaction->product->title}'.",
+            $rating,
+            "/marketplace/{$transaction->product_id}"
+        );
 
         $sellerStats = $this->buildSellerStats($transaction->seller);
 

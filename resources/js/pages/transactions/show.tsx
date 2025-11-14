@@ -420,17 +420,18 @@ export default function TransactionShow({ transaction, canAct }: TransactionShow
                           onChange={(e) => setDeliveryProof(e.target.files?.[0] || null)}
                           className="block w-full text-sm"
                         />
-                        <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+                        <Button type="submit" className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Confirm Delivery
+                          <span className="hidden sm:inline">Confirm Delivery</span>
+                          <span className="sm:hidden">Confirm</span>
                         </Button>
                       </form>
                     </CardContent>
                   </Card>
                 )}
 
-                {/* Seller Shipping Proof Upload: now visible during 'payment_submitted' status */}
-                {transaction.status === 'payment_submitted' && transaction.seller && auth.user && transaction.seller.id === auth.user.id && (
+                {/* Seller Shipping Proof Upload: visible when seller can ship */}
+                {canAct.canShip && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center">
@@ -461,9 +462,10 @@ export default function TransactionShow({ transaction, canAct }: TransactionShow
                           className="block w-full text-sm"
                           required
                         />
-                        <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                        <Button type="submit" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white">
                           <Truck className="mr-2 h-4 w-4" />
-                          Mark as Shipped
+                          <span className="hidden sm:inline">Mark as Shipped</span>
+                          <span className="sm:hidden">Mark Shipped</span>
                         </Button>
                       </form>
                     </CardContent>
@@ -498,12 +500,13 @@ export default function TransactionShow({ transaction, canAct }: TransactionShow
                     <CardTitle>Actions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                       {canAct.canSubmitPayment && (
-                        <Link href={`/transactions/${transaction.id}/submit-payment`}>
-                          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Link href={`/transactions/${transaction.id}/submit-payment`} className="w-full sm:w-auto">
+                          <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
                             <Upload className="mr-2 h-4 w-4" />
-                            Submit Payment Proof
+                            <span className="hidden sm:inline">Submit Payment Proof</span>
+                            <span className="sm:hidden">Submit Payment</span>
                           </Button>
                         </Link>
                       )}
@@ -511,30 +514,22 @@ export default function TransactionShow({ transaction, canAct }: TransactionShow
                       {canAct.canVerifyPayment && (
                         <Button
                           onClick={() => router.post(`/admin/transactions/${transaction.id}/verify-payment`)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Verify Payment
-                        </Button>
-                      )}
-                      
-                      {canAct.canShip && (
-                        <Button
-                          onClick={() => router.post(`/transactions/${transaction.id}/mark-shipped`)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                          <Truck className="mr-2 h-4 w-4" />
-                          Mark as Shipped
+                          <span className="hidden sm:inline">Verify Payment</span>
+                          <span className="sm:hidden">Verify</span>
                         </Button>
                       )}
                       
                       {canAct.canConfirmDelivery && (
                         <Button
                           onClick={() => router.post(`/transactions/${transaction.id}/confirm-delivery`)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                         >
                           <Package className="mr-2 h-4 w-4" />
-                          Confirm Delivery
+                          <span className="hidden sm:inline">Confirm Delivery</span>
+                          <span className="sm:hidden">Confirm</span>
                         </Button>
                       )}
                       
@@ -542,9 +537,11 @@ export default function TransactionShow({ transaction, canAct }: TransactionShow
                         <Button
                           onClick={() => setShowCancelModal(true)}
                           variant="destructive"
+                          className="w-full sm:w-auto"
                         >
                           <XCircle className="mr-2 h-4 w-4" />
-                          Cancel Transaction
+                          <span className="hidden sm:inline">Cancel Transaction</span>
+                          <span className="sm:hidden">Cancel</span>
                         </Button>
                       )}
                     </div>

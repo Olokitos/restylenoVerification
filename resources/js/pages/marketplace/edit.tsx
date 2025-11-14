@@ -203,20 +203,28 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
     const waistSizes = ['W24', 'W26', 'W28', 'W30', 'W32', 'W34', 'W36', 'W38', 'W40', 'W42'];
     const sizeOptions = useMemo(() => {
         const normalized = data.category?.toLowerCase();
-        if (normalized === 'shoes') {
+        if (normalized === 'shoes' || normalized === 'boots') {
             return shoeSizes;
         }
-        if (['pants', 'underwear', 'jeans', 'bottoms'].includes(normalized || '')) {
+        if (['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(normalized || '')) {
             return waistSizes;
+        }
+        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+            return [];
         }
         return apparelSizes;
     }, [data.category]);
 
     useEffect(() => {
+        const normalized = data.category?.toLowerCase();
+        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+            setData('size', '');
+            return;
+        }
         if (data.size && !sizeOptions.includes(data.size)) {
             setData('size', '');
         }
-    }, [data.size, sizeOptions, setData]);
+    }, [data.category, data.size, sizeOptions, setData]);
     const conditions = [
         { value: 'new', label: 'New' },
         { value: 'like_new', label: 'Like New' },
@@ -381,13 +389,13 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
                                                 id="price"
                                                 type="number"
                                                 value={data.price}
-                                            onChange={handlePriceChange}
-                                            onBlur={handlePriceBlur}
+                                                onChange={handlePriceChange}
+                                                onBlur={handlePriceBlur}
                                                 placeholder="0"
                                                 className="mt-1"
-                                            min={100}
-                                            step={100}
-                                            inputMode="numeric"
+                                                min={1}
+                                                step={1}
+                                                inputMode="numeric"
                                             />
                                             {errors.price && (
                                                 <p className="text-sm text-red-600 mt-1">{errors.price}</p>
@@ -444,24 +452,32 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {/* Size */}
-                                        <div>
-                                            <Label>Size *</Label>
-                                            <RadioGroup value={data.size} onValueChange={(value) => setData('size', value)} className="mt-2">
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {sizeOptions.map((size) => (
-                                                        <div key={size} className="flex items-center space-x-2">
-                                                            <RadioGroupItem value={size} id={`size-${size}`} />
-                                                            <Label htmlFor={`size-${size}`} className="text-sm">
-                                                                {size}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </RadioGroup>
-                                            {errors.size && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.size}</p>
-                                            )}
-                                        </div>
+                                        {data.category && data.category.toLowerCase() !== 'accessories' && data.category.toLowerCase() !== 'hat' && data.category.toLowerCase() !== 'hats' && (
+                                            <div>
+                                                <Label>
+                                                    {['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(data.category?.toLowerCase() || '')
+                                                        ? 'Waist Size *'
+                                                        : ['shoes', 'boots'].includes(data.category?.toLowerCase() || '')
+                                                        ? 'Shoe Size *'
+                                                        : 'Size *'}
+                                                </Label>
+                                                <RadioGroup value={data.size} onValueChange={(value) => setData('size', value)} className="mt-2">
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        {sizeOptions.map((size) => (
+                                                            <div key={size} className="flex items-center space-x-2">
+                                                                <RadioGroupItem value={size} id={`size-${size}`} />
+                                                                <Label htmlFor={`size-${size}`} className="text-sm">
+                                                                    {size}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </RadioGroup>
+                                                {errors.size && (
+                                                    <p className="text-sm text-red-600 mt-1">{errors.size}</p>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Color */}
                                         <div>

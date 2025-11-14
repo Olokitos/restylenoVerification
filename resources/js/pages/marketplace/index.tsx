@@ -65,6 +65,10 @@ interface Product {
         id: number;
         name: string;
     };
+    seller_rating?: {
+        average: number;
+        count: number;
+    };
 }
 
 interface Category {
@@ -848,10 +852,23 @@ export default function MarketplaceIndex({
                                                             {product.title}
                                                         </h3>
                                                         
-                                                        {/* Seller */}
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                            by {product.user.name}
-                                                        </p>
+                                                        {/* Seller and Rating */}
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                by {product.user.name}
+                                                            </p>
+                                                            {product.seller_rating && product.seller_rating.count > 0 && (
+                                                                <div className="flex items-center gap-1 text-xs">
+                                                                    <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                                                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                                                        {product.seller_rating.average.toFixed(1)}
+                                                                    </span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">
+                                                                        ({product.seller_rating.count})
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         
                                                         {/* Price and Condition */}
                                                         <div className="flex items-center justify-between mb-2">
