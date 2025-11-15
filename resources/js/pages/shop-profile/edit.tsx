@@ -39,7 +39,7 @@ interface EditProductPageProps {
 }
 
 export default function EditProduct({ product, categories }: EditProductPageProps) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, patch, processing, errors } = useForm({
         title: product.title,
         description: product.description,
         price: product.price.toString(),
@@ -53,7 +53,14 @@ export default function EditProduct({ product, categories }: EditProductPageProp
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(`/shop-profile/${product.id}`);
+        patch(`/shop-profile/${product.id}`, {
+            onSuccess: () => {
+                // Redirect handled by controller
+            },
+            onError: (errors) => {
+                console.error('Update errors:', errors);
+            }
+        });
     };
 
     const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];

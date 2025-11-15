@@ -46,19 +46,17 @@ interface SellItemPageProps {
 }
 
 const defaultCategories = [
-    'Accessories',
-    'Activewear',
-    'Bottoms',
-    'Dresses',
-    'Hats',
-    'Jackets',
-    'Jeans',
+    'T-shirt',
+    'Polo',
     'Pants',
-    'Polos',
+    'Jeans',
+    'Shorts',
+    'Dress',
     'Shoes',
-    'Tops',
-    'Underwear',
-    'Vintage',
+    'Boots',
+    'Hat',
+    'Jacket',
+    'Accessories',
 ];
 
 export default function SellItem({ categories }: SellItemPageProps) {
@@ -89,7 +87,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
     // Validation function
     const validateField = (field: string, value: any): string => {
         const normalizedCategory = data.category?.toLowerCase();
-        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat' && normalizedCategory !== 'hats';
+        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat';
 
         switch (field) {
             case 'title':
@@ -176,7 +174,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
     // Validate all fields
     const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
         const normalizedCategory = data.category?.toLowerCase();
-        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat' && normalizedCategory !== 'hats';
+        const requiresSize = normalizedCategory !== 'accessories' && normalizedCategory !== 'hat';
         
         const newErrors: Record<string, string> = {};
         
@@ -317,10 +315,10 @@ export default function SellItem({ categories }: SellItemPageProps) {
         if (normalized === 'shoes' || normalized === 'boots') {
             return shoeSizes;
         }
-        if (['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(normalized || '')) {
+        if (['pants', 'jeans', 'shorts'].includes(normalized || '')) {
             return waistSizes;
         }
-        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+        if (normalized === 'accessories' || normalized === 'hat') {
             return [];
         }
         return apparelSizes;
@@ -328,7 +326,7 @@ export default function SellItem({ categories }: SellItemPageProps) {
 
     useEffect(() => {
         const normalized = data.category?.toLowerCase();
-        if (normalized === 'accessories' || normalized === 'hat' || normalized === 'hats') {
+        if (normalized === 'accessories' || normalized === 'hat') {
             setData('size', '');
             return;
         }
@@ -632,10 +630,10 @@ export default function SellItem({ categories }: SellItemPageProps) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {/* Size */}
-                                        {data.category && data.category.toLowerCase() !== 'accessories' && data.category.toLowerCase() !== 'hat' && data.category.toLowerCase() !== 'hats' && (
+                                        {data.category && data.category.toLowerCase() !== 'accessories' && data.category.toLowerCase() !== 'hat' && (
                                             <div>
                                                 <Label>
-                                                    {['pants', 'underwear', 'jeans', 'bottoms', 'shorts'].includes(data.category?.toLowerCase() || '')
+                                                    {['pants', 'jeans', 'shorts'].includes(data.category?.toLowerCase() || '')
                                                         ? 'Waist Size *'
                                                         : ['shoes', 'boots'].includes(data.category?.toLowerCase() || '')
                                                         ? 'Shoe Size *'

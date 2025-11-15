@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('messages/{conversation}', [App\Http\Controllers\MessageController::class, 'show'])->name('messages.show');
     Route::post('messages/start', [App\Http\Controllers\MessageController::class, 'start'])->name('messages.start');
     Route::post('messages/{conversation}', [App\Http\Controllers\MessageController::class, 'store'])->name('messages.store');
+    Route::get('messages/{conversation}/new', [App\Http\Controllers\MessageController::class, 'getNewMessages'])->name('messages.new');
     Route::get('messages/conversation/get', [App\Http\Controllers\MessageController::class, 'getConversation'])->name('messages.get-conversation');
     
     // Favorites
@@ -188,6 +189,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('transactions/{transaction}/confirm-delivery', [App\Http\Controllers\TransactionController::class, 'confirmDelivery'])->name('transactions.confirm-delivery');
     Route::get('transactions/buyer', [App\Http\Controllers\TransactionController::class, 'buyerTransactions'])->name('transactions.buyer');
     Route::get('transactions/buyer/export', [App\Http\Controllers\TransactionController::class, 'exportPurchaseHistory'])->name('transactions.buyer.export');
+    Route::get('sellers/{seller}/profile', [App\Http\Controllers\TransactionController::class, 'showSellerProfile'])->name('sellers.profile');
     
     // Seller routes
     Route::post('transactions/{transaction}/mark-shipped', [App\Http\Controllers\TransactionController::class, 'markShipped'])->name('transactions.mark-shipped');

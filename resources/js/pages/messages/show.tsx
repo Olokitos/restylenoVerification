@@ -47,9 +47,14 @@ interface MessagesShowProps {
   messages: Message[];
 }
 
-export default function MessagesShow({ conversation, messages }: MessagesShowProps) {
-  const [newMessage, setNewMessage] = useState('');
+export default function MessagesShow({ conversation, messages: initialMessages }: MessagesShowProps) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [lastMessageId, setLastMessageId] = useState<number>(
+    initialMessages.length > 0 ? initialMessages[initialMessages.length - 1].id : 0
+  );
+  const [isPolling, setIsPolling] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const { data, setData, post, processing, errors } = useForm({
     message: '',
@@ -59,13 +64,97 @@ export default function MessagesShow({ conversation, messages }: MessagesShowPro
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Set up polling
+  useEffect(() => {
+    if (!isPolling || !conversation.id) return;
+
+    const fetchNewMessages = async () => {
+      try {
+        const response = await fetch(`/messages/${conversation.id}/new?last_message_id=${lastMessageId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.messages.length > 0) {
+            setMessages(prev => [...prev, ...result.messages]);
+            setLastMessageId(result.last_message_id);
+            scrollToBottom();
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching new messages:', error);
+      }
+    };
+
+    // Poll every 2 seconds
+    pollingIntervalRef.current = setInterval(fetchNewMessages, 2000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [isPolling, lastMessageId, conversation.id]);
+
+  // Stop polling when user leaves the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPolling(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (data.message.trim()) {
+    if (!data.message.trim() || processing) return;
+
+    try {
+      const response = await fetch(`/messages/${conversation.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ message: data.message.trim() }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.message) {
+          // Add the new message to the list
+          setMessages(prev => [...prev, result.message]);
+          setLastMessageId(result.message.id);
+          setData('message', '');
+          scrollToBottom();
+        }
+      } else {
+        // Fallback to Inertia form submission if AJAX fails
+        post(`/messages/${conversation.id}`, {
+          onSuccess: () => {
+            setData('message', '');
+            scrollToBottom();
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Fallback to Inertia form submission
       post(`/messages/${conversation.id}`, {
         onSuccess: () => {
           setData('message', '');
@@ -117,9 +206,20 @@ export default function MessagesShow({ conversation, messages }: MessagesShowPro
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {conversation.other_user.name}
-                </h1>
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {conversation.other_user.name}
+                  </h1>
+                  {isPolling && (
+                    <span className="flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span>Live</span>
+                    </span>
+                  )}
+                </div>
                 {conversation.subject && (
                   <p className="text-gray-600 dark:text-gray-400">{conversation.subject}</p>
                 )}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Models\Product;
 use App\Models\CommissionRecord;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -469,10 +470,17 @@ class TransactionController extends Controller
      */
     public function buyerTransactions()
     {
-        $transactions = Transaction::with(['product', 'seller'])
+        $transactions = Transaction::with(['product', 'seller', 'rating'])
             ->where('buyer_id', auth()->id())
             ->orderBy('created_at', 'desc')
             ->paginate(10);
+
+        // Add rating status to each transaction
+        $transactions->getCollection()->transform(function ($transaction) {
+            $transaction->has_rating = $transaction->rating !== null;
+            $transaction->can_rate = $transaction->status === 'completed' && $transaction->rating === null;
+            return $transaction;
+        });
 
         return Inertia::render('transactions/buyer', [
             'transactions' => $transactions,
@@ -546,6 +554,79 @@ class TransactionController extends Controller
         ]);
 
         return back()->with('success', 'Payout info updated!');
+    }
+
+    /**
+     * Show seller profile with ratings
+     */
+    public function showSellerProfile(User $seller)
+    {
+        // Get seller ratings
+        $ratings = \App\Models\Rating::with(['buyer', 'transaction.product'])
+            ->where('seller_id', $seller->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($rating) {
+                return [
+                    'id' => $rating->id,
+                    'rating' => $rating->rating,
+                    'comment' => $rating->comment,
+                    'created_at' => $rating->created_at->toISOString(),
+                    'buyer' => [
+                        'id' => $rating->buyer->id,
+                        'name' => $rating->buyer->name,
+                    ],
+                    'transaction' => $rating->transaction ? [
+                        'id' => $rating->transaction->id,
+                        'product' => [
+                            'title' => $rating->transaction->product->title,
+                        ],
+                    ] : null,
+                ];
+            });
+
+        $averageRating = $ratings->avg('rating') ?? 0;
+        $reviewCount = $ratings->count();
+
+        // Get eligible transactions for rating (completed transactions without rating)
+        $eligibleTransactions = [];
+        $canRate = false;
+
+        if (auth()->check()) {
+            $eligibleTransactions = Transaction::with('product')
+                ->where('buyer_id', auth()->id())
+                ->where('seller_id', $seller->id)
+                ->where('status', 'completed')
+                ->whereDoesntHave('rating')
+                ->orderBy('completed_at', 'desc')
+                ->get()
+                ->map(function ($transaction) {
+                    return [
+                        'id' => $transaction->id,
+                        'label' => sprintf(
+                            '#%d · %s · %s',
+                            $transaction->id,
+                            $transaction->product->title ?? 'Order',
+                            $transaction->completed_at ? $transaction->completed_at->diffForHumans() : ''
+                        ),
+                    ];
+                });
+
+            $canRate = $eligibleTransactions->isNotEmpty();
+        }
+
+        return Inertia::render('sellers/profile', [
+            'seller' => [
+                'id' => $seller->id,
+                'name' => $seller->name,
+                'email' => $seller->email,
+            ],
+            'ratings' => $ratings,
+            'average_rating' => round($averageRating, 1),
+            'review_count' => $reviewCount,
+            'eligible_transactions' => $eligibleTransactions,
+            'can_rate' => $canRate,
+        ]);
     }
 
     /**

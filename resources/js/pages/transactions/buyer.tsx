@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Search,
   Filter,
-  Download
+  Download,
+  User,
+  Star
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 
@@ -26,6 +28,8 @@ interface Transaction {
   sale_price: number;
   status: string;
   created_at: string;
+  has_rating?: boolean;
+  can_rate?: boolean;
   product: {
     id: number;
     title: string;
@@ -344,9 +348,35 @@ export default function BuyerTransactions({ transactions }: BuyerTransactionsPro
                           </div>
                           
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            <span className="truncate">Sold by: {transaction.seller.name}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="truncate">Sold by: {transaction.seller.name}</span>
+                              <Link href={`/sellers/${transaction.seller.id}/profile`}>
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                                  <User className="h-3 w-3 mr-1" />
+                                  View Profile
+                                </Button>
+                              </Link>
+                            </div>
                             <span className="hidden sm:inline">•</span>
                             <span>{formatDate(transaction.created_at)}</span>
+                            {transaction.status === 'completed' && (
+                              <>
+                                <span className="hidden sm:inline">•</span>
+                                {transaction.has_rating ? (
+                                  <span className="flex items-center text-green-600 dark:text-green-400">
+                                    <Star className="h-3 w-3 mr-1 fill-current" />
+                                    Rated
+                                  </span>
+                                ) : (
+                                  <Link href={`/sellers/${transaction.seller.id}/profile`}>
+                                    <span className="flex items-center text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                                      <Star className="h-3 w-3 mr-1" />
+                                      Rate Seller
+                                    </span>
+                                  </Link>
+                                )}
+                              </>
+                            )}
                           </div>
                           
                           <div className="mt-1 sm:mt-2">

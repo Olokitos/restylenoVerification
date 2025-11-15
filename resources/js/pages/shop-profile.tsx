@@ -23,7 +23,8 @@ import {
     Grid3X3,
     List,
     Filter,
-    Search
+    Search,
+    CheckCircle
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { formatPrice } from '@/utils/price';
@@ -71,7 +72,6 @@ interface Props {
 }
 
 export default function ShopProfile({ products, stats, ratingSummary }: Props) {
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -92,8 +92,16 @@ export default function ShopProfile({ products, stats, ratingSummary }: Props) {
     };
 
     const handleDelete = (productId: number) => {
-        if (confirm('Are you sure you want to delete this item?')) {
-            router.delete(`/shop-profile/${productId}`);
+        if (confirm('Are you sure you want to remove this item from the marketplace? The product will be hidden but records will be preserved.')) {
+            router.delete(`/shop-profile/${productId}`, {
+                onSuccess: () => {
+                    // Product status will be set to inactive, preserving all records
+                },
+                onError: (errors) => {
+                    console.error('Failed to remove product:', errors);
+                    alert('Failed to remove product. Please try again.');
+                }
+            });
         }
     };
 
@@ -104,7 +112,15 @@ export default function ShopProfile({ products, stats, ratingSummary }: Props) {
 
     const handleMarkAsSold = (productId: number) => {
         if (confirm('Mark this item as sold? This will remove it from the marketplace.')) {
-            router.patch(`/marketplace/${productId}/mark-sold`);
+            router.patch(`/marketplace/${productId}/mark-sold`, {}, {
+                onSuccess: () => {
+                    // Page will reload automatically with updated status
+                },
+                onError: (errors) => {
+                    console.error('Failed to mark as sold:', errors);
+                    alert('Failed to mark item as sold. Please try again.');
+                }
+            });
         }
     };
 
@@ -208,12 +224,37 @@ export default function ShopProfile({ products, stats, ratingSummary }: Props) {
                             </div>
                           )}
                           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{product.category?.name}</div>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-lg font-bold text-green-600 dark:text-emerald-200">{formatPrice(product.price)}</span>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-green-600 dark:text-emerald-200">{formatPrice(product.price)}</span>
+                              <Badge className={
+                                product.status === 'active' 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                  : product.status === 'sold'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                              }>
+                                {product.status === 'active' ? 'Active' : product.status === 'sold' ? 'Sold' : 'Inactive'}
+                              </Badge>
+                            </div>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(product)} title="Edit">
-                                <Edit className="h-4 w-4 text-green-500" />
-                              </Button>
+                              {product.status === 'active' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="flex-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-300 dark:border-green-700"
+                                  onClick={() => handleMarkAsSold(product.id)}
+                                  title="Mark as Sold"
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Mark as Sold
+                                </Button>
+                              )}
+                              <Link href={`/shop-profile/${product.id}/edit`}>
+                                <Button variant="ghost" size="icon" title="Edit">
+                                  <Edit className="h-4 w-4 text-green-500" />
+                                </Button>
+                              </Link>
                               <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} title="Delete">
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>

@@ -100,6 +100,7 @@ class RatingController extends Controller
                         $transaction->product->title ?? 'Order',
                         optional($transaction->completed_at)->diffForHumans()
                     ),
+                    'product_title' => $transaction->product->title ?? 'Order',
                 ])
                 ->values();
 

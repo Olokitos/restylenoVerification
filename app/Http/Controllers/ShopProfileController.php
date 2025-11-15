@@ -101,7 +101,7 @@ class ShopProfileController extends Controller
     }
 
     /**
-     * Remove the specified product
+     * Remove the specified product (soft delete - sets status to inactive instead of deleting)
      */
     public function destroy(Product $product)
     {
@@ -110,10 +110,20 @@ class ShopProfileController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $product->delete();
+        // Instead of deleting, set status to inactive to preserve records
+        // This maintains transaction history and other related data
+        $product->update([
+            'status' => 'inactive',
+        ]);
+
+        \Log::info('Product soft deleted (set to inactive)', [
+            'product_id' => $product->id,
+            'user_id' => auth()->id(),
+            'title' => $product->title,
+        ]);
 
         return redirect()->route('shop-profile.index')
-            ->with('success', 'Product deleted successfully!');
+            ->with('success', 'Product removed from marketplace successfully!');
     }
 
     /**

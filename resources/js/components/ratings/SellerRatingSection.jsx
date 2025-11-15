@@ -235,7 +235,7 @@ export default function SellerRatingSection({
 
               {eligibleTransactions.length === 1 && (
                 <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
-                  Reviewing order {eligibleTransactions[0].label}
+                  Reviewing order {eligibleTransactions[0].label} • {eligibleTransactions[0].product_title}
                 </div>
               )}
 

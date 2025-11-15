@@ -185,8 +185,78 @@ class MessageController extends Controller
         // Update conversation's last message time
         $conversation->update(['last_message_at' => now()]);
 
+        // Load sender relationship
+        $message->load('sender');
+
+        // If AJAX request, return JSON
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => [
+                    'id' => $message->id,
+                    'message' => $message->message,
+                    'sender_id' => $message->sender_id,
+                    'sender_name' => $message->sender->name,
+                    'is_read' => $message->is_read,
+                    'created_at' => $message->created_at->toISOString(),
+                    'is_own' => $message->sender_id === auth()->id(),
+                ],
+            ]);
+        }
+
         return redirect()->back()
             ->with('success', 'Message sent successfully!');
+    }
+
+    /**
+     * Get new messages for a conversation (for real-time updates)
+     */
+    public function getNewMessages(Request $request, Conversation $conversation)
+    {
+        // Ensure user is part of this conversation
+        if ($conversation->user1_id !== auth()->id() && $conversation->user2_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to conversation.');
+        }
+
+        $request->validate([
+            'last_message_id' => 'nullable|integer|exists:messages,id',
+        ]);
+
+        $lastMessageId = $request->input('last_message_id', 0);
+
+        // Get messages created after the last message ID
+        $newMessages = $conversation->messages()
+            ->with('sender')
+            ->where('id', '>', $lastMessageId)
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'message' => $message->message,
+                    'sender_id' => $message->sender_id,
+                    'sender_name' => $message->sender->name,
+                    'is_read' => $message->is_read,
+                    'created_at' => $message->created_at->toISOString(),
+                    'is_own' => $message->sender_id === auth()->id(),
+                ];
+            });
+
+        // Mark received messages as read (only if not sent by current user)
+        $conversation->messages()
+            ->where('id', '>', $lastMessageId)
+            ->where('sender_id', '!=', auth()->id())
+            ->where('is_read', false)
+            ->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'messages' => $newMessages,
+            'last_message_id' => $newMessages->isNotEmpty() ? $newMessages->last()['id'] : $lastMessageId,
+        ]);
     }
 
     /**
