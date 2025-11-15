@@ -41,6 +41,12 @@ class ProfileUpdateRequest extends FormRequest
                 'dimensions:min_width=100,min_height=100,max_width=5000,max_height=5000',
             ],
 
+            'body_type' => [
+                'nullable',
+                'string',
+                Rule::in(['not_specified', 'apple', 'pear', 'hourglass', 'rectangle', 'inverted_triangle']),
+            ],
+
             'gcash_number' => [
                 'nullable',
                 'string',

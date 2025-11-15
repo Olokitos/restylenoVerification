@@ -24,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'is_admin',
         'profile_picture',
+        'body_type',
         'gcash_number', // allow mass assignment
         'bank_name',
         'bank_account_number',

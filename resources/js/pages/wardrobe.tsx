@@ -27,7 +27,8 @@ import {
     Save,
     Sparkles,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Eye
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -1105,6 +1106,8 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
     const [isSaveOutfitOpen, setIsSaveOutfitOpen] = useState(false);
     const [selectedOutfitItems, setSelectedOutfitItems] = useState<WardrobeItem[]>([]);
+    const [viewingOutfit, setViewingOutfit] = useState<any | null>(null);
+    const [isViewOutfitOpen, setIsViewOutfitOpen] = useState(false);
     const [mlConfidence, setMlConfidence] = useState<number>(0);
     const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
     const [isSavingPreferences, setIsSavingPreferences] = useState(false);
@@ -3087,6 +3090,13 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem onClick={() => {
+                                                                    setViewingOutfit(outfit);
+                                                                    setIsViewOutfitOpen(true);
+                                                                }}>
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    View Outfit
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => {
                                                                     // Load outfit items for re-recommendation
                                                                     const outfitItems = wardrobeItems.filter(item => 
                                                                         outfit.wardrobe_item_ids.includes(item.id)
@@ -4253,6 +4263,245 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             </Button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* View Outfit Dialog */}
+            <Dialog open={isViewOutfitOpen} onOpenChange={setIsViewOutfitOpen}>
+                <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center space-x-2">
+                            <Eye className="h-5 w-5 text-blue-600" />
+                            <span>View Outfit Combination</span>
+                        </DialogTitle>
+                        <DialogDescription>
+                            {viewingOutfit && (
+                                <>
+                                    {viewingOutfit.name}
+                                    {viewingOutfit.occasion && (
+                                        <Badge variant="outline" className="ml-2">
+                                            {viewingOutfit.occasion}
+                                        </Badge>
+                                    )}
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    {viewingOutfit && (
+                        <div className="space-y-6">
+                            {/* Outfit Description */}
+                            {viewingOutfit.description && (
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        {viewingOutfit.description}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Outfit Items */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                                    <Shirt className="h-5 w-5" />
+                                    <span>Outfit Items ({viewingOutfit.wardrobe_item_ids?.length || 0})</span>
+                                </h3>
+                                
+                                {viewingOutfit.wardrobe_item_ids && viewingOutfit.wardrobe_item_ids.length > 0 ? (
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        {viewingOutfit.wardrobe_item_ids.map((itemId: number) => {
+                                            const item = wardrobeItems.find(w => w.id === itemId);
+                                            return item ? (
+                                                <Card key={itemId} className="border-gray-200 dark:border-gray-700">
+                                                    <CardContent className="p-4">
+                                                        <div className="flex gap-4">
+                                                            {/* Item Image */}
+                                                            <div className="relative w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden group flex-shrink-0">
+                                                                {getCurrentImage(item) ? (
+                                                                    <>
+                                                                        <img 
+                                                                            src={getCurrentImage(item) || ''} 
+                                                                            alt={item.name}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                        {/* Navigation arrows for multiple images */}
+                                                                        {getImageCount(item) > 1 && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        prevImage(item.id, getImageCount(item));
+                                                                                    }}
+                                                                                    className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                                >
+                                                                                    <ChevronLeft className="h-3 w-3" />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        nextImage(item.id, getImageCount(item));
+                                                                                    }}
+                                                                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                                >
+                                                                                    <ChevronRight className="h-3 w-3" />
+                                                                                </button>
+                                                                                {/* Image counter */}
+                                                                                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                                    {(currentImageIndex[item.id] || 0) + 1}/{getImageCount(item)}
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <Shirt className="h-8 w-8 text-gray-400" />
+                                                                )}
+                                                            </div>
+
+                                                            {/* Item Details */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-semibold text-base text-gray-900 dark:text-white truncate">
+                                                                    {item.name}
+                                                                </h4>
+                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                    {item.category && (
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {item.category}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {item.color && (
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {item.color}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {item.brand && (
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {item.brand}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                                                    {item.size && (
+                                                                        <div>Size: <span className="font-medium">{item.size}</span></div>
+                                                                    )}
+                                                                    {item.fabric && (
+                                                                        <div>Fabric: <span className="font-medium">{item.fabric}</span></div>
+                                                                    )}
+                                                                </div>
+                                                                {item.description && (
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 line-clamp-2">
+                                                                        {item.description}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ) : (
+                                                <Card key={itemId} className="border-gray-200 dark:border-gray-700">
+                                                    <CardContent className="p-4">
+                                                        <div className="flex items-center justify-center py-8 text-gray-400">
+                                                            <div className="text-center">
+                                                                <Shirt className="h-8 w-8 mx-auto mb-2" />
+                                                                <p className="text-sm">Item not found</p>
+                                                                <p className="text-xs">ID: {itemId}</p>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Shirt className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                        <p>No items in this outfit</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Outfit Metadata */}
+                            {(viewingOutfit.weather_context || viewingOutfit.outfit_metadata) && (
+                                <div className="border-t pt-4 space-y-2">
+                                    {viewingOutfit.weather_context && (
+                                        <div className="text-sm">
+                                            <span className="font-medium">Weather Context:</span>
+                                            <div className="mt-1 text-gray-600 dark:text-gray-400">
+                                                {typeof viewingOutfit.weather_context === 'object' ? (
+                                                    <div className="space-y-1">
+                                                        {viewingOutfit.weather_context.location && (
+                                                            <div>Location: {viewingOutfit.weather_context.location}</div>
+                                                        )}
+                                                        {viewingOutfit.weather_context.temp && (
+                                                            <div>Temperature: {viewingOutfit.weather_context.temp}°C</div>
+                                                        )}
+                                                        {viewingOutfit.weather_context.condition && (
+                                                            <div>Condition: {viewingOutfit.weather_context.condition}</div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span>{JSON.stringify(viewingOutfit.weather_context)}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {viewingOutfit.outfit_metadata && (
+                                        <div className="text-sm">
+                                            <span className="font-medium">Metadata:</span>
+                                            <div className="mt-1 text-gray-600 dark:text-gray-400">
+                                                {typeof viewingOutfit.outfit_metadata === 'object' ? (
+                                                    <pre className="text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded overflow-auto">
+                                                        {JSON.stringify(viewingOutfit.outfit_metadata, null, 2)}
+                                                    </pre>
+                                                ) : (
+                                                    <span>{viewingOutfit.outfit_metadata}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Feedback Stats */}
+                            {(viewingOutfit.total_feedback_count || viewingOutfit.positive_feedback_count) && (
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <div className="text-sm">
+                                        <span className="font-medium">Total Feedback:</span>
+                                        <span className="ml-2 text-gray-600 dark:text-gray-400">
+                                            {viewingOutfit.total_feedback_count || 0}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="font-medium">Positive:</span>
+                                        <span className="ml-2 text-green-600 dark:text-green-400">
+                                            {viewingOutfit.positive_feedback_count || 0}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end space-x-2 pt-4 border-t">
+                                <Button 
+                                    variant="outline"
+                                    onClick={() => {
+                                        if (viewingOutfit) {
+                                            const outfitItems = wardrobeItems.filter(item => 
+                                                viewingOutfit.wardrobe_item_ids.includes(item.id)
+                                            );
+                                            setSelectedOutfitItems(outfitItems);
+                                            setIsViewOutfitOpen(false);
+                                            setIsSaveOutfitOpen(true);
+                                        }
+                                    }}
+                                >
+                                    <Edit3 className="mr-2 h-4 w-4" />
+                                    Edit Outfit
+                                </Button>
+                                <Button onClick={() => setIsViewOutfitOpen(false)}>
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </AppLayout>

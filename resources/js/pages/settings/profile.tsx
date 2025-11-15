@@ -94,6 +94,7 @@ export default function Profile({
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(
         auth.user.profile_picture ? `/storage/${auth.user.profile_picture}` : null
     );
+    const [bodyType, setBodyType] = useState<string>(auth.user.body_type || 'not_specified');
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -305,15 +306,15 @@ export default function Profile({
                                             </div>
                                         </div>
 
-                                        {/* Body Type Field - Display Only */}
+                                        {/* Body Type Field */}
                                         <div className="space-y-2">
                                             <Label htmlFor="body_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Body Type
                                             </Label>
                                             <Select 
-                                                defaultValue={auth.user.body_type || 'not_specified'} 
+                                                value={bodyType}
+                                                onValueChange={setBodyType}
                                                 name="body_type"
-                                                disabled
                                             >
                                                 <SelectTrigger className="h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500">
                                                     <SelectValue placeholder="Select your body type" />
@@ -327,6 +328,7 @@ export default function Profile({
                                                     <SelectItem value="inverted_triangle">Inverted Triangle</SelectItem>
                                                 </SelectContent>
                                             </Select>
+                                            <input type="hidden" name="body_type" value={bodyType} />
                                             <div className="text-xs text-gray-500 dark:text-gray-400">
                                                 This feature helps personalize your outfit recommendations
                                             </div>
