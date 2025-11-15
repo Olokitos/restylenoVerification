@@ -628,6 +628,10 @@ class AIRecommenderController extends Controller
         $temp = $weatherData['main']['temp'];
         $condition = strtolower($weatherData['weather'][0]['main'] ?? '');
         
+        // Rain is only valid for 24-32°C (Philippines climate)
+        $isRainy = (str_contains($condition, 'rain') || str_contains($condition, 'drizzle') || 
+                    str_contains($condition, 'thunderstorm')) && $temp >= 24 && $temp <= 32;
+        
         // Light colors for hot weather (from system)
         $lightColors = ['white', 'sky blue', 'cream', 'ivory', 'yellow', 'pink', 'lavender', 'mint', 'coral', 'turquoise', 'beige', 'khaki', 'tan', 'silver'];
         
@@ -646,29 +650,20 @@ class AIRecommenderController extends Controller
         // Warm fabrics preferred in cool weather
         $warmFabrics = ['wool', 'fleece', 'cashmere'];
         
-        return $wardrobeItems->filter(function ($item) use ($temp, $condition, $lightColors, $darkColors, $breathableFabrics, $waterproofFabrics, $heavyFabrics, $warmFabrics) {
+        return $wardrobeItems->filter(function ($item) use ($temp, $condition, $isRainy, $lightColors, $darkColors, $breathableFabrics, $waterproofFabrics, $heavyFabrics, $warmFabrics) {
             $category = strtolower($item->category);
             $itemColor = strtolower($item->color ?? '');
             $itemFabric = strtolower($item->fabric ?? '');
             
-            // WET SEASON (Rainy) - Priority check
-            if (str_contains($condition, 'rain') || str_contains($condition, 'drizzle') || 
-                str_contains($condition, 'thunderstorm')) {
-                // Prefer: jackets, pants, boots, waterproof items
+            // WET SEASON (Rainy) - Priority check (only valid 24-32°C)
+            if ($isRainy) {
+                // Prefer: jackets, pants, boots, waterproof items, all shoes
                 $hasRainAppropriateCategory = str_contains($category, 'jacket') || 
                                              str_contains($category, 'pant') || 
                                              str_contains($category, 'jean') ||
                                              str_contains($category, 'boot') ||
-                                             str_contains($category, 'hoodie');
-                
-                // Prefer: dark colors from system
-                $hasRainAppropriateColor = false;
-                foreach ($darkColors as $darkColor) {
-                    if (str_contains($itemColor, $darkColor)) {
-                        $hasRainAppropriateColor = true;
-                        break;
-                    }
-                }
+                                             str_contains($category, 'hoodie') ||
+                                             str_contains($category, 'shoe'); // Include all shoes for rain
                 
                 // Prefer: waterproof fabrics
                 $hasWaterproofFabric = false;
@@ -679,21 +674,13 @@ class AIRecommenderController extends Controller
                     }
                 }
                 
-                // Avoid: shorts, skirts, dresses, sandals, light colors
+                // Avoid: shorts, skirts, dresses, sandals
                 $isInappropriate = str_contains($category, 'short') || 
                                  str_contains($category, 'skirt') || 
                                  str_contains($category, 'dress') ||
                                  str_contains($category, 'sandal');
                 
-                $hasLightColor = false;
-                foreach ($lightColors as $lightColor) {
-                    if (str_contains($itemColor, $lightColor)) {
-                        $hasLightColor = true;
-                        break;
-                    }
-                }
-                
-                // Avoid heavy fabrics that retain moisture (wool, fleece, cashmere)
+                // Avoid heavy fabrics that retain moisture
                 $hasHeavyFabric = false;
                 foreach ($heavyFabrics as $heavyFabric) {
                     if (str_contains($itemFabric, $heavyFabric)) {
@@ -702,12 +689,25 @@ class AIRecommenderController extends Controller
                     }
                 }
                 
-                // Include if: appropriate category OR appropriate color OR waterproof fabric, AND not inappropriate, AND not light color, AND not heavy fabric
-                return ($hasRainAppropriateCategory || $hasRainAppropriateColor || $hasWaterproofFabric) && 
-                       !$isInappropriate && !$hasLightColor && !$hasHeavyFabric;
+                // SMART LOGIC: If item is appropriate for rain (boots, waterproof, jacket, shoes), 
+                // allow it regardless of color (respects user preferences)
+                if (($hasRainAppropriateCategory || $hasWaterproofFabric) && !$isInappropriate && !$hasHeavyFabric) {
+                    return true; // Allow appropriate items even with light colors
+                }
+                
+                // For other items, prefer dark colors but don't strictly exclude
+                $hasRainAppropriateColor = false;
+                foreach ($darkColors as $darkColor) {
+                    if (str_contains($itemColor, $darkColor)) {
+                        $hasRainAppropriateColor = true;
+                        break;
+                    }
+                }
+                
+                return $hasRainAppropriateColor && !$isInappropriate && !$hasHeavyFabric;
             }
             
-            // DRY SEASON (Hot) - >30°C
+            // DRY SEASON (Hot) - >30°C (rain already handled above)
             if ($temp > 30) {
                 // Prefer: light clothing
                 $hasHotAppropriateCategory = str_contains($category, 'shirt') || 
@@ -763,6 +763,7 @@ class AIRecommenderController extends Controller
             
             // WARM WEATHER (24-30°C) - Typical Philippine temperature
             if ($temp >= 24 && $temp <= 30) {
+                // Not raining (rain already handled above)
                 // Prefer: light colors from system
                 $hasWarmAppropriateColor = false;
                 foreach ($lightColors as $lightColor) {
@@ -882,10 +883,12 @@ class AIRecommenderController extends Controller
             $preferredColors = implode(', ', $userPreferences['preferred_colors'] ?? []);
             $preferredCategories = implode(', ', $userPreferences['preferred_categories'] ?? []);
             
+            // Rain is only valid for 24-32°C (Philippines climate)
+            $isRainy = (str_contains($conditionLower, 'rain') || str_contains($conditionLower, 'drizzle') || 
+                        str_contains($conditionLower, 'thunderstorm')) && $temp >= 24 && $temp <= 32;
+            
             // Determine fabric preferences based on weather (Philippines two-season system)
             $fabricPreference = '';
-            $isRainy = str_contains($conditionLower, 'rain') || str_contains($conditionLower, 'drizzle') || str_contains($conditionLower, 'thunderstorm');
-            
             if ($temp > 30 || ($temp >= 24 && !$isRainy)) {
                 // Hot/Dry season - prefer breathable fabrics
                 $fabricPreference = 'Prefer breathable fabrics like cotton, linen, bamboo, modal, or rayon.';
@@ -900,8 +903,8 @@ class AIRecommenderController extends Controller
             // Build weather-specific clothing guidance (Philippines climate)
             $weatherGuidance = '';
             if ($isRainy) {
-                // Wet season / Rainy condition overrides temp
-                $weatherGuidance = 'It is rainy. Wear jackets, hoodies, windbreakers, long pants, waterproof shoes. Avoid shorts and sandals.';
+                // Wet season / Rainy condition (24-32°C only)
+                $weatherGuidance = 'It is rainy. Wear jackets, hoodies, windbreakers, long pants, waterproof shoes (boots or closed shoes, not sandals). Avoid shorts and sandals.';
             } elseif ($temp >= 32) {
                 // Very hot (common from March–May)
                 $weatherGuidance = 'Very hot weather. Wear ultra-light clothing: sleeveless, shirts, shorts, skirts, sandals. Avoid jackets or sweaters.';
@@ -916,20 +919,61 @@ class AIRecommenderController extends Controller
                 $weatherGuidance = 'Cool weather. Wear jackets, sweaters, hoodies, long sleeves, pants. Avoid very thin clothing.';
             }
             
-            // Create a semantic query for what the user wants
-            $queryText = "Outfit for {$occasion} occasion in {$temp}°C {$condition} weather.";
-            if ($weatherGuidance) {
-                $queryText .= " {$weatherGuidance}";
+            // Build smarter, more contextual AI query
+            $queryText = "Create an outfit recommendation for a {$occasion} occasion. ";
+
+            // Weather context with priority (rain only valid 24-32°C)
+            if ($isRainy) {
+                $queryText .= "CRITICAL: It is currently raining ({$condition}) at {$temp}°C. ";
+                $queryText .= "Prioritize rain protection: waterproof items, boots (not sandals), jackets, long pants. ";
+                if ($temp >= 24 && $temp < 30) {
+                    $queryText .= "Balance protection with breathability since it's warm. ";
+                } elseif ($temp >= 30) {
+                    $queryText .= "It's also hot, so prioritize lightweight waterproof/breathable materials. ";
+                }
+            } else {
+                $queryText .= "Weather conditions: {$temp}°C, {$condition}. ";
+                if ($weatherGuidance) {
+                    $queryText .= "{$weatherGuidance} ";
+                }
             }
-            if ($preferredColors) {
-                $queryText .= " Preferred colors: {$preferredColors}.";
+
+            // User preferences (personalization)
+            if ($preferredColors || $preferredCategories) {
+                $queryText .= "User's personal style preferences: ";
+                if ($preferredColors) {
+                    $queryText .= "favorite colors are {$preferredColors}. ";
+                }
+                if ($preferredCategories) {
+                    $queryText .= "prefers {$preferredCategories} items. ";
+                }
+                $queryText .= "Prioritize matching these preferences when possible, but weather protection takes priority over color preferences. ";
             }
-            if ($preferredCategories) {
-                $queryText .= " Preferred items: {$preferredCategories}.";
-            }
+
+            // Fabric guidance
             if ($fabricPreference) {
-                $queryText .= " {$fabricPreference}";
+                $queryText .= "{$fabricPreference} ";
             }
+
+            // Smart context about conflicts
+            if ($isRainy && $preferredColors) {
+                $preferredColorsArray = explode(', ', $preferredColors);
+                $hasLightPreferredColor = false;
+                foreach ($preferredColorsArray as $color) {
+                    $colorLower = strtolower(trim($color));
+                    if (in_array($colorLower, ['white', 'cream', 'ivory', 'yellow', 'pink', 'lavender', 'mint', 'coral', 'beige', 'khaki', 'tan'])) {
+                        $hasLightPreferredColor = true;
+                        break;
+                    }
+                }
+                
+                if ($hasLightPreferredColor) {
+                    $queryText .= "Note: User prefers light colors, but for rainy weather, prioritize functional items (boots, waterproof jackets, shoes) even if they're light colored, as protection is more important than color preference in rain. ";
+                }
+            }
+
+            // Final instruction
+            $queryText .= "Select items that best match the weather requirements first, then user preferences, ensuring a practical and stylish outfit combination.";
             
             // Create text descriptions for each wardrobe item (include fabric)
             $itemTexts = $filteredItems->map(function ($item) {

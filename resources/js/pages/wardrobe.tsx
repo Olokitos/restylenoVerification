@@ -203,18 +203,20 @@ const getPhilippinesSeason = (): 'dry' | 'wet' => {
 const getWeatherProfile = (temp: number, condition: string) => {
     const normalizedCondition = condition.toLowerCase();
     const season = getPhilippinesSeason(); // Determine current season
-    const isRainy = normalizedCondition.includes('rain') || normalizedCondition === 'rainy' || 
-                    normalizedCondition.includes('drizzle') || normalizedCondition.includes('thunderstorm');
+    // Rain is only valid for 24-32°C (Philippines climate)
+    const isRainy = (normalizedCondition.includes('rain') || normalizedCondition === 'rainy' || 
+                    normalizedCondition.includes('drizzle') || normalizedCondition.includes('thunderstorm')) &&
+                    temp >= 24 && temp <= 32;
 
-    // WET SEASON (May to October) - Priority check for rainy conditions
+    // WET SEASON (May to October) - Priority check for rainy conditions (24-32°C only)
     // Even during wet season months, if it's actually raining, prioritize wet season logic
-    if (season === 'wet' || isRainy) {
+    if ((season === 'wet' || isRainy) && temp >= 24 && temp <= 32) {
         // During wet season or when raining, prefer dark colors and protective clothing
         return {
             label: season === 'wet' ? 'wet season (rainy)' : 'wet season (rainy weather)',
             // Dark colors from system that hide water marks
             preferredColors: ['Black', 'Navy', 'Blue', 'Gray', 'Charcoal', 'Maroon', 'Brown', 'Teal', 'Emerald', 'Olive', 'Purple', 'Violet'],
-            preferred: ['jacket', 'hoodie', 'windbreaker', 'long sleeve', 'pant', 'jean', 'boot', 'waterproof'],
+            preferred: ['jacket', 'hoodie', 'windbreaker', 'long sleeve', 'pant', 'jean', 'boot', 'shoe', 'waterproof'],
             avoid: ['sandal', 'open', 'short', 'skirt', 'dress', 'White', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint', 'Coral', 'Beige', 'Khaki', 'Tan'],
             tempRange: 'rainy',
             maxOuterwearScore: 3,
@@ -279,8 +281,9 @@ const getWeatherProfile = (temp: number, condition: string) => {
             preferLightOuterwear: true,
         };
 
-        // Rainy condition in mild weather (wet season logic)
-        if (isRainy || season === 'wet') {
+        // Rainy condition in mild weather (wet season logic) - only if 24-32°C
+        // Note: This case won't happen since we're in 20-23°C range, but kept for consistency
+        if ((isRainy || season === 'wet') && temp >= 24 && temp <= 32) {
             baseProfile.preferred.push('jacket', 'hoodie', 'windbreaker', 'boot', 'waterproof', 'long sleeve', 'pant', 'jean');
             baseProfile.avoid.push('sandal', 'open', 'short', 'skirt', 'dress');
             baseProfile.preferredColors = ['Black', 'Navy', 'Blue', 'Gray', 'Charcoal', 'Maroon', 'Brown'];
@@ -454,17 +457,22 @@ const buildWeatherBasedSuggestion = ({
         }
     }
 
-    if (conditionLower.includes('rain') || conditionLower === 'rainy') {
+    // Rain is only valid for 24-32°C (Philippines climate)
+    const isRainyCondition = (conditionLower.includes('rain') || conditionLower === 'rainy') && temp >= 24 && temp <= 32;
+    
+    if (isRainyCondition) {
         reasonParts.push('Added rain-friendly layers for protection.');
         // Prioritize outerwear (jackets, coats, hoodies) for rain
         if ((grouped.outerwear || []).length) {
             takeFromGroup('outerwear', 2); // Try to get 2 outerwear items for layering
         }
-        // Prioritize boots and waterproof footwear
-        takeFromGroup('footwear', 1, (item) =>
-            /boot|waterproof|rain/.test((item.name || '').toLowerCase()) ||
-            /boot/.test((item.category || '').toLowerCase()),
-        );
+        // Prioritize boots and waterproof footwear (not sandals)
+        takeFromGroup('footwear', 1, (item) => {
+            const itemCat = (item.category || '').toLowerCase();
+            const itemName = (item.name || '').toLowerCase();
+            return (/boot|waterproof|rain/.test(itemName) || /boot|shoe/.test(itemCat)) && 
+                   !itemCat.includes('sandal');
+        });
         // Avoid shorts, skirts, dresses in rain - prefer pants/bottoms
         if ((grouped.bottoms || []).length) {
             takeFromGroup('bottoms', 1, (item) => {
@@ -2063,6 +2071,45 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         return matchesSearch && matchesCategory && matchesColor;
     });
 
+    // Group filtered items by category for organized display
+    const itemsByCategory = useMemo(() => {
+        const grouped: Record<string, WardrobeItem[]> = {};
+        
+        filteredItems.forEach(item => {
+            const category = item.category || 'Uncategorized';
+            if (!grouped[category]) {
+                grouped[category] = [];
+            }
+            grouped[category].push(item);
+        });
+        
+        // Sort items within each category by name
+        Object.keys(grouped).forEach(category => {
+            grouped[category].sort((a, b) => a.name.localeCompare(b.name));
+        });
+        
+        return grouped;
+    }, [filteredItems]);
+
+    // Define category display order (logical grouping)
+    const categoryOrder = [
+        'T-shirt', 'Polo', 'Long Sleeves', 'Sweaters', 'Hoodie',
+        'Dress', 'Skirts',
+        'Pants', 'Jeans', 'Shorts',
+        'Jacket',
+        'Shoes', 'Sandals', 'Boots',
+        'Hat', 'Accessories'
+    ];
+
+    // Get sorted categories (prioritize defined order, then alphabetically)
+    const sortedCategories = useMemo(() => {
+        const definedCategories = categoryOrder.filter(cat => itemsByCategory[cat]);
+        const otherCategories = Object.keys(itemsByCategory)
+            .filter(cat => !categoryOrder.includes(cat))
+            .sort();
+        return [...definedCategories, ...otherCategories];
+    }, [itemsByCategory]);
+
     // Handle adding new item
     const handleAddItem = (e: React.FormEvent) => {
         e.preventDefault();
@@ -3314,11 +3361,32 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                 </Button>
                                     </div>
                     ) : (
-                        <div className={viewMode === 'grid' 
-                            ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-                            : 'space-y-4'
-                        }>
-                            {filteredItems.map((item) => (
+                        <div className="space-y-8">
+                            {sortedCategories.map((category) => {
+                                const categoryItems = itemsByCategory[category] || [];
+                                if (categoryItems.length === 0) return null;
+                                
+                                return (
+                                    <div key={category} className="space-y-4">
+                                        {/* Category Header */}
+                                        <div className="flex items-center justify-between border-b-2 border-green-200 dark:border-green-800 pb-3 mb-4">
+                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+                                                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                                                    <Shirt className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                                </div>
+                                                <span>{category}</span>
+                                                <Badge variant="secondary" className="ml-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                                                    {categoryItems.length} {categoryItems.length === 1 ? 'item' : 'items'}
+                                                </Badge>
+                                            </h3>
+                                        </div>
+                                        
+                                        {/* Items Grid/List for this Category */}
+                                        <div className={viewMode === 'grid' 
+                                            ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                                            : 'space-y-4'
+                                        }>
+                                            {categoryItems.map((item) => (
                                         <Card 
                                             key={item.id} 
                                             className={`border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 ${
@@ -3487,7 +3555,11 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                             </CardContent>
