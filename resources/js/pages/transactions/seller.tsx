@@ -15,7 +15,8 @@ import {
   TrendingDown,
   Search,
   Filter,
-  Award
+  Award,
+  AlertCircle
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { usePage } from '@inertiajs/react';
@@ -122,40 +123,42 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
     });
   };
 
-  const getActionButton = (transaction: Transaction) => {
-    switch (transaction.status) {
-      case 'payment_verified':
-        return (
+  const getActionButtons = (transaction: Transaction) => {
+    const buttons = [];
+    
+    // Always show View Details button
+    buttons.push(
+      <Link key="view-details" href={`/transactions/${transaction.id}`} className="w-full sm:w-auto">
+        <Button size="sm" variant="outline" className="w-full sm:w-auto">
+          <Eye className="mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">View Details</span>
+          <span className="sm:hidden">Details</span>
+        </Button>
+      </Link>
+    );
+    
+    // Show Mark as Shipped button when payment is verified
+    // This navigates to the transaction details page where they can upload shipping proof
+    if (transaction.status === 'payment_verified') {
+      buttons.push(
+        <Link 
+          key="mark-shipped"
+          href={`/transactions/${transaction.id}`}
+          className="w-full sm:w-auto"
+        >
           <Button 
             size="sm" 
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-            onClick={() => {
-              router.post(`/transactions/${transaction.id}/mark-shipped`, {}, {
-                onSuccess: () => {
-                  // Transaction status will be updated
-                },
-                onError: (errors) => {
-                  console.error('Failed to mark as shipped:', errors);
-                }
-              });
-            }}
           >
             <Truck className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Mark as Shipped</span>
             <span className="sm:hidden">Mark Shipped</span>
           </Button>
-        );
-      default:
-        return (
-          <Link href={`/transactions/${transaction.id}`} className="w-full sm:w-auto">
-            <Button size="sm" variant="outline" className="w-full sm:w-auto">
-              <Eye className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">View Details</span>
-              <span className="sm:hidden">Details</span>
-            </Button>
-          </Link>
-        );
+        </Link>
+      );
     }
+    
+    return buttons;
   };
 
   const filteredTransactions = transactions.data.filter(transaction => {
@@ -361,13 +364,25 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
                               <span className="font-bold text-green-600">{formatPrice(transaction.seller_earnings)}</span>
                             </div>
                           </div>
+                          
+                          {/* Payment Verification Waiting Message */}
+                          {transaction.status === 'payment_submitted' && (
+                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                              <div className="flex items-center space-x-2">
+                                <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                                  <span className="font-semibold">Waiting for admin to verify payment.</span> You can view details and upload shipping proof once payment is verified.
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Actions */}
                       <div className="flex items-center justify-end sm:justify-start">
-                        <div className="w-full sm:w-auto">
-                          {getActionButton(transaction)}
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          {getActionButtons(transaction)}
                         </div>
                       </div>
                     </div>
