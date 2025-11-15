@@ -174,16 +174,48 @@ export default function PendingPayments({ transactions: initialTransactions }: P
 
   const handleVerifyPayment = (transactionId: number) => {
     if (confirm('Are you sure you want to verify this payment? This will mark the payment as collected by the platform.')) {
-      router.post(`/admin/transactions/${transactionId}/verify-payment`);
+      router.post(`/admin/transactions/${transactionId}/verify-payment`, {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+          // Refresh transactions after successful verification
+          refreshTransactions(false);
+        },
+        onError: (errors) => {
+          console.error('Error verifying payment:', errors);
+          const errorMessage = errors?.error || 'Failed to verify payment. Please try again.';
+          alert(errorMessage);
+        },
+      });
     }
   };
 
   const handleUploadPayoutProof = (transactionId: number, file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file.');
+      return;
+    }
+
+    // Validate file size (max 4MB)
+    if (file.size > 4 * 1024 * 1024) {
+      alert('File size must be less than 4MB.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('payout_proof', file);
 
     router.post(`/admin/transactions/${transactionId}/upload-payout-proof`, formData, {
       forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        // Refresh transactions after successful upload
+        refreshTransactions(false);
+      },
+      onError: (errors) => {
+        console.error('Error uploading payout proof:', errors);
+        alert('Failed to upload payout proof. Please try again.');
+      },
     });
   };
 
@@ -538,13 +570,23 @@ export default function PendingPayments({ transactions: initialTransactions }: P
                           <Button
                             onClick={() => {
                               if (confirm('Mark payment as collected by the platform?')) {
-                                router.post(`/admin/transactions/${transaction.id}/collect-payment`, undefined, {
+                                router.post(`/admin/transactions/${transaction.id}/collect-payment`, {}, {
                                   preserveScroll: true,
+                                  onSuccess: () => {
+                                    // Refresh transactions after successful collection
+                                    refreshTransactions(false);
+                                  },
+                                  onError: (errors) => {
+                                    console.error('Error collecting payment:', errors);
+                                    const errorMessage = errors?.error || 'Failed to mark payment as collected. Please try again.';
+                                    alert(errorMessage);
+                                  },
                                 });
                               }
                             }}
                             size="sm"
                             className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+                            title="Mark that the platform has collected the payment from the buyer"
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             <span className="hidden sm:inline">Mark Payment Collected</span>
@@ -555,12 +597,26 @@ export default function PendingPayments({ transactions: initialTransactions }: P
                           <Button
                             onClick={() => {
                               if (!transaction.payment_collected_by_platform) {
-                                alert('Collect the payment first before completing this transaction.');
+                                alert('Please mark the payment as collected first before completing this transaction.');
                                 return;
                               }
-                              if (confirm('Complete this transaction and process seller payout? This will record the commission and finalize the sale.')) {
-                                router.post(`/admin/transactions/${transaction.id}/admin-complete`, undefined, {
+                              
+                              const confirmMessage = transaction.status === 'delivered'
+                                ? 'Complete this transaction and process seller payout? This will record the commission and finalize the sale.'
+                                : 'Complete this transaction? This will mark it as ready for seller payout processing.';
+                              
+                              if (confirm(confirmMessage)) {
+                                router.post(`/admin/transactions/${transaction.id}/admin-complete`, {}, {
                                   preserveScroll: true,
+                                  onSuccess: () => {
+                                    // Refresh transactions after successful completion
+                                    refreshTransactions(false);
+                                  },
+                                  onError: (errors) => {
+                                    console.error('Error completing transaction:', errors);
+                                    const errorMessage = errors?.error || 'Failed to complete transaction. Please try again.';
+                                    alert(errorMessage);
+                                  },
                                 });
                               }
                             }}
@@ -569,6 +625,7 @@ export default function PendingPayments({ transactions: initialTransactions }: P
                               ? 'bg-green-600 hover:bg-green-700 text-white' 
                               : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                             disabled={!transaction.payment_collected_by_platform}
+                            title={!transaction.payment_collected_by_platform ? 'Mark payment as collected first' : 'Complete transaction and process seller payout'}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             <span className="hidden sm:inline">
@@ -590,12 +647,13 @@ export default function PendingPayments({ transactions: initialTransactions }: P
                           <input
                             id={`payout-proof-${transaction.id}`}
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.jpg,.jpeg,.png,.gif,.webp"
                             className="hidden"
                             onChange={(event) => {
                               const file = event.target.files?.[0];
                               if (file) {
                                 handleUploadPayoutProof(transaction.id, file);
+                                // Reset input to allow re-uploading the same file
                                 event.target.value = '';
                               }
                             }}
@@ -607,15 +665,28 @@ export default function PendingPayments({ transactions: initialTransactions }: P
                             size="sm"
                             className="w-full sm:w-auto"
                             onClick={() => {
+                              if (!transaction.payment_collected_by_platform) {
+                                alert('Please mark the payment as collected first before uploading payout proof.');
+                                return;
+                              }
                               const input = document.getElementById(`payout-proof-${transaction.id}`) as HTMLInputElement | null;
                               input?.click();
                             }}
+                            title={!transaction.payment_collected_by_platform ? 'Mark payment as collected first' : 'Upload proof of seller payout'}
                           >
+                            <Package className="mr-2 h-4 w-4" />
                             <span className="hidden sm:inline">Upload Payout Proof</span>
                             <span className="sm:hidden">Upload Proof</span>
                           </Button>
                           {!transaction.payment_collected_by_platform && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Enable after platform collects payment.</p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+                              Mark payment as collected first
+                            </p>
+                          )}
+                          {transaction.payout_proof_path && (
+                            <p className="mt-1 text-xs text-green-600 dark:text-green-400 hidden sm:block">
+                              ✓ Payout proof uploaded
+                            </p>
                           )}
                         </div>
                       </div>
