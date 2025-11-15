@@ -1370,6 +1370,21 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                         // Handle error responses from the API
                         const errorData = await response.json().catch(() => ({}));
                         
+                        // Handle CSRF token mismatch specifically (419 status)
+                        if (response.status === 419) {
+                            setAiSuggestion({
+                                message: 'CSRF token mismatch.',
+                                items: [],
+                                reason: 'Session expired. Please refresh the page and try again.'
+                            });
+                            setSuggestionLoading(false);
+                            setSuccessMessage('Session expired. Please refresh the page and try again.');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 3000);
+                            return;
+                        }
+                        
                         // If it's a timeout, retry
                         if (errorData.timeout && retryCount < maxRetries) {
                             retryCount++;

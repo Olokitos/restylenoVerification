@@ -110,6 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'totalCategories' => \App\Models\Category::where('is_active', true)->count(),
                 'featuredProducts' => \App\Models\Product::where('status', 'active')->where('is_featured', true)->count(),
                 'recentProducts' => \App\Models\Product::where('status', 'active')->where('created_at', '>=', now()->subDays(7))->count(),
+                'personalProducts' => \App\Models\Product::where('user_id', auth()->id())->where('status', 'active')->count(),
             ];
             
             return Inertia::render('dashboard', [

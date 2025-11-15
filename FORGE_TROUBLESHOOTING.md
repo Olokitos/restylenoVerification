@@ -140,6 +140,73 @@ chown -R forge:forge storage bootstrap/cache
    - Fix the error
    - Set `APP_DEBUG=false` back
 
+### Error: "502 Bad Gateway - upstream sent too big header"
+**Problem:** Nginx's FastCGI buffer sizes are too small for the response headers from PHP-FPM. This commonly happens when:
+- Sessions contain large amounts of data
+- Cookies are too large
+- Response headers exceed default buffer sizes
+
+**Error Message in Nginx Logs:**
+```
+upstream sent too big header while reading response header from upstream
+```
+
+**How to Fix:**
+1. Go to **Forge → Site → Nginx** tab
+2. Find the `location ~ \.php$ {` block (or the FastCGI location block)
+3. Add these buffer size directives inside that block:
+   ```nginx
+   fastcgi_buffers 16 16k;
+   fastcgi_buffer_size 32k;
+   fastcgi_busy_buffers_size 64k;
+   ```
+4. Also add these in the `server {` block (outside location blocks):
+   ```nginx
+   fastcgi_hide_header X-Powered-By;
+   ```
+5. Click **"Update Nginx Configuration"**
+6. Restart Nginx: `sudo systemctl restart nginx`
+
+**Complete Nginx Configuration Example:**
+```nginx
+server {
+    # ... other server config ...
+    
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+        
+        # Increase buffer sizes to handle large headers
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        fastcgi_busy_buffers_size 64k;
+        fastcgi_temp_file_write_size 64k;
+        
+        # Timeouts
+        fastcgi_read_timeout 300s;
+        fastcgi_send_timeout 300s;
+    }
+}
+```
+
+**Alternative: If you can't edit Nginx config directly:**
+If Forge doesn't allow direct Nginx editing, you can also reduce session/cookie size in Laravel:
+1. Go to **Site → Environment**
+2. Add or update:
+   ```
+   SESSION_DRIVER=file
+   SESSION_LIFETIME=120
+   ```
+3. Clear session data: `php artisan cache:clear`
+
+**Verify the Fix:**
+After making changes, test by:
+- Adding a wardrobe item with images
+- Creating a marketplace listing
+- Check Nginx error logs: `Server → Logs → Nginx Error Log` (should no longer show the error)
+
 ---
 
 ## Check Nginx Configuration

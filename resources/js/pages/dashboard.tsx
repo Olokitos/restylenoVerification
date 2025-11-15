@@ -18,6 +18,7 @@ interface DashboardStats {
         totalCategories: number;
         featuredProducts: number;
         recentProducts: number;
+        personalProducts: number;
     };
 }
 
@@ -123,13 +124,13 @@ export default function Dashboard({ stats }: DashboardProps) {
                             <div className="grid grid-cols-2 gap-4 mb-6 text-center">
                                 <div className="bg-white/50 dark:bg-gray-800/70 rounded-lg p-3">
                                     <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {stats.marketplaceStats?.totalProducts || 11}
+                                        {stats.marketplaceStats?.totalProducts ?? 0}
                                     </div>
                                     <div className="text-xs text-gray-600 dark:text-gray-400">Products</div>
                                 </div>
                                 <div className="bg-white/50 dark:bg-gray-800/70 rounded-lg p-3">
                                     <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {stats.marketplaceStats?.featuredProducts || 5}
+                                        {stats.marketplaceStats?.personalProducts ?? 0}
                                     </div>
                                     <div className="text-xs text-gray-600 dark:text-gray-400">Personal</div>
                                 </div>

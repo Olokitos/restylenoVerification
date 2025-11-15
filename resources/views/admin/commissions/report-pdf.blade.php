@@ -10,7 +10,6 @@
             font-weight: normal;
             font-style: normal;
         }
-    <style>
         * {
             font-family: "DejaVu Sans", Arial, sans-serif;
         }
@@ -26,36 +25,56 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
-            border-bottom: 2px solid #38b2ac;
-            padding-bottom: 12px;
+            border-bottom: 3px solid #22c55e;
+            padding-bottom: 16px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
         }
         .brand {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 16px;
         }
-        .brand-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #22c55e, #14b8a6);
+        .brand-text {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #ffffff;
+            flex-direction: column;
+        }
+        .brand-name {
+            font-size: 32px;
             font-weight: 700;
-            font-size: 16px;
+            color: #15803d;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        .brand-tagline {
+            font-size: 14px;
+            color: #16a34a;
+            margin-top: 4px;
+            font-weight: 500;
         }
         .meta {
             text-align: right;
             font-size: 11px;
             color: #4a5568;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .meta-label {
+            font-weight: 600;
+            color: #64748b;
         }
         .title {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
-            margin: 4px 0;
+            margin: 8px 0 4px 0;
             color: #0f172a;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #475569;
         }
         .summary-grid {
             display: grid;
@@ -85,6 +104,13 @@
             margin-bottom: 16px;
             font-size: 11px;
             color: #475569;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #22c55e;
+        }
+        .filters strong {
+            color: #15803d;
         }
         .filters span {
             display: inline-block;
@@ -98,7 +124,7 @@
             overflow: hidden;
         }
         thead {
-            background: #0f172a;
+            background: #15803d;
             color: #ffffff;
         }
         th, td {
@@ -134,7 +160,9 @@
             margin-top: 18px;
             font-size: 10px;
             color: #64748b;
-            text-align: right;
+            text-align: center;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
         }
         .empty-state {
             text-align: center;
@@ -148,16 +176,19 @@
     <div class="header">
         <div>
             <div class="brand">
-                <div class="brand-icon">R</div>
-                <div>
+                <div class="brand-text">
+                    <div class="brand-name">RESTYLE</div>
+                    <div class="brand-tagline">Waste less - Wear more</div>
                     <div class="title">Commission Dashboard Report</div>
-                    <div style="font-size:12px;color:#475569;">Restyle Platform · Sustainable Fashion Marketplace</div>
+                    <div class="subtitle">Sustainable Fashion Marketplace · Platform Analytics</div>
                 </div>
             </div>
         </div>
         <div class="meta">
-            <div>Generated: {{ $generatedAt->format('M d, Y g:i A') }}</div>
-            <div>Report ID: {{ strtoupper($generatedAt->format('ymdHis')) }}</div>
+            <div class="meta-label">Generated:</div>
+            <div>{{ $generatedAt->format('M d, Y g:i A') }}</div>
+            <div class="meta-label" style="margin-top: 8px;">Report ID:</div>
+            <div>{{ strtoupper($generatedAt->format('ymdHis')) }}</div>
         </div>
     </div>
 
@@ -187,7 +218,7 @@
     </div>
 
     <div class="filters">
-        <strong>Filters</strong>:
+        <strong>Filters Applied:</strong>
         <span>Start Date: {{ $filters['start_date'] ?? 'All' }}</span>
         <span>End Date: {{ $filters['end_date'] ?? 'All' }}</span>
         <span>Seller: {{ $filters['seller_id'] ?? 'All' }}</span>
@@ -236,7 +267,8 @@
     @endif
 
     <div class="footer">
-        Confidential · Restyle Commission Analytics · {{ $generatedAt->format('Y') }}
+        <strong>RESTYLE</strong> · Commission Analytics Report · Confidential · {{ $generatedAt->format('Y') }}<br>
+        Waste less - Wear more · Sustainable Fashion Marketplace
     </div>
 </body>
 </html>

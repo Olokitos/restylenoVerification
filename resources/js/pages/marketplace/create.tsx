@@ -51,7 +51,6 @@ const defaultCategories = [
     'Bottoms',
     'Dresses',
     'Hats',
-    'Jacket',
     'Jackets',
     'Jeans',
     'Pants',
