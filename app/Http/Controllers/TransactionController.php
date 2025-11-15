@@ -229,7 +229,8 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        if (!in_array($transaction->status, ['payment_verified', 'shipped', 'completed'], true)) {
+        // Allow marking payment collected for verified, shipped, delivered, or completed transactions
+        if (!in_array($transaction->status, ['payment_verified', 'shipped', 'delivered', 'completed'], true)) {
             return redirect()->back()->withErrors(['error' => 'Payment can only be marked collected after verification.']);
         }
 
@@ -284,6 +285,19 @@ class TransactionController extends Controller
     {
         if ($transaction->seller_id !== auth()->id() || !$transaction->canShip()) {
             abort(403);
+        }
+
+        // ENFORCE: Payment must be verified before shipping
+        if ($transaction->status !== 'payment_verified') {
+            return redirect()->back()->withErrors([
+                'error' => 'Payment must be verified by admin before you can ship the product.'
+            ]);
+        }
+
+        if (!$transaction->payment_collected_by_platform) {
+            return redirect()->back()->withErrors([
+                'error' => 'Payment must be collected by platform before shipping.'
+            ]);
         }
 
         // Require shipping proof image
@@ -360,9 +374,18 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        // Verify platform has collected payment
+        // ENFORCE: Payment must be verified and collected
         if (!$transaction->payment_collected_by_platform) {
-            return redirect()->back()->withErrors(['error' => 'Payment must be collected by platform before completing transaction.']);
+            return redirect()->back()->withErrors([
+                'error' => 'Payment must be collected by platform before completing transaction.'
+            ]);
+        }
+
+        // ENFORCE: Status must be delivered
+        if ($transaction->status !== 'delivered') {
+            return redirect()->back()->withErrors([
+                'error' => 'Transaction must be delivered before completion.'
+            ]);
         }
 
         // Update transaction

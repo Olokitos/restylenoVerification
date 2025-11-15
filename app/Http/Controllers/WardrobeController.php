@@ -46,13 +46,18 @@ class WardrobeController extends Controller
         
         $request->validate($rules);
 
+        // Convert empty size to null for Hat and Accessories
+        $size = ($request->category === 'Hat' || $request->category === 'Accessories') 
+            ? null 
+            : ($request->size ?: null);
+
         $wardrobeItem = new WardrobeItem([
             'user_id' => auth()->id(),
             'name' => $request->name,
             'brand' => $request->brand,
             'category' => $request->category,
             'color' => $request->color,
-            'size' => $request->size,
+            'size' => $size,
             'fabric' => $request->fabric,
             'description' => $request->description,
         ]);
@@ -143,13 +148,18 @@ class WardrobeController extends Controller
         
         $request->validate($rules);
 
+        // Convert empty size to null for Hat and Accessories
+        $size = ($request->category === 'Hat' || $request->category === 'Accessories') 
+            ? null 
+            : ($request->size ?: null);
+
         // Update basic fields
         $wardrobeItem->update([
             'name' => $request->name,
             'brand' => $request->brand,
             'category' => $request->category,
             'color' => $request->color,
-            'size' => $request->size,
+            'size' => $size,
             'fabric' => $request->fabric,
             'description' => $request->description,
         ]);

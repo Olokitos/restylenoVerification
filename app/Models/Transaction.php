@@ -115,8 +115,8 @@ class Transaction extends Model
      */
     public function canShip()
     {
-        // Allow shipping as soon as payment is submitted (admin will verify both proofs)
-        return in_array($this->status, ['payment_submitted', 'payment_verified']);
+        // REQUIRE payment verification before shipping - prevents bypass
+        return $this->status === 'payment_verified' && $this->payment_collected_by_platform;
     }
 
     /**

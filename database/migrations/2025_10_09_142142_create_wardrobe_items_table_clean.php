@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('brand', 50);
             $table->string('category', 50);
             $table->string('color', 20);
-            $table->string('size', 10);
+            $table->string('size', 10)->nullable(); // Nullable for Hat and Accessories
             $table->string('description', 200)->nullable();
             $table->string('image_path')->nullable();
             $table->timestamps();

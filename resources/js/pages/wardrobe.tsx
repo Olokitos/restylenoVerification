@@ -2037,6 +2037,19 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     const handleAddItem = (e: React.FormEvent) => {
         e.preventDefault();
         
+        // Validate required fields (size is optional for Hat and Accessories)
+        const requiresSize = data.category !== 'Hat' && data.category !== 'Accessories';
+        if (!data.name.trim() || !data.brand.trim() || !data.category || !data.color || (requiresSize && !data.size)) {
+            setSuccessMessage('Please fill in all required fields.');
+            setTimeout(() => setSuccessMessage(null), 3000);
+            return;
+        }
+        
+        // Ensure size is cleared for Hat and Accessories
+        if (data.category === 'Hat' || data.category === 'Accessories') {
+            setData('size', '');
+        }
+        
         // Prepare submission - if images array has files, clear single image; otherwise clear images array
         if (data.images && Array.isArray(data.images) && data.images.length > 0) {
             setData('image', null); // Clear single image when using images array
@@ -2100,6 +2113,11 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                 setSuccessMessage('Please fill in all required fields.');
                 setTimeout(() => setSuccessMessage(null), 3000);
                 return;
+            }
+
+            // Ensure size is cleared for Hat and Accessories
+            if (data.category === 'Hat' || data.category === 'Accessories') {
+                setData('size', '');
             }
 
             console.log('Updating item:', editingItem.id, 'with data:', data);
@@ -3506,7 +3524,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                         </div>
                                     </div>
 
-                                    {/* Row 2: Category, Color, and Size */}
+                                    {/* Row 2: Category, Color, Size, and Fabric */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="item-category">Category *</Label>
@@ -3540,7 +3558,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                             </Select>
                                             {errors.color && <p className="text-red-500 text-sm">{errors.color}</p>}
                                         </div>
-                                        {data.category !== 'Accessories' && data.category !== 'Hat' && (
+                                        {data.category !== 'Accessories' && data.category !== 'Hat' ? (
                                             <div className="space-y-2">
                                                 <Label htmlFor="item-size">
                                                     {data.category === 'Shorts' || data.category === 'Jeans' || data.category === 'Pants' 
@@ -3569,29 +3587,55 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                 </Select>
                                                 {errors.size && <p className="text-red-500 text-sm">{errors.size}</p>}
                                             </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="item-fabric">Fabric (Optional)</Label>
+                                                <Select 
+                                                    value={data.fabric || undefined} 
+                                                    onValueChange={(value) => setData('fabric', value === 'none' ? '' : value)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select fabric" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">None</SelectItem>
+                                                        {fabrics.map((fabric) => (
+                                                            <SelectItem key={fabric} value={fabric}>
+                                                                {fabric}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         )}
-                                        <div className="space-y-2">
-                                            <Label htmlFor="item-fabric">Fabric (Optional)</Label>
-                                            <Select 
-                                                value={data.fabric || undefined} 
-                                                onValueChange={(value) => setData('fabric', value === 'none' ? '' : value)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select fabric" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">None</SelectItem>
-                                                    {fabrics.map((fabric) => (
-                                                        <SelectItem key={fabric} value={fabric}>
-                                                            {fabric}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
                                     </div>
+                                    
+                                    {/* Row 3: Fabric (only shown when size field is visible, since fabric is already in the grid above for Hat/Accessories) */}
+                                    {data.category !== 'Accessories' && data.category !== 'Hat' && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="item-fabric-row3">Fabric (Optional)</Label>
+                                                <Select 
+                                                    value={data.fabric || undefined} 
+                                                    onValueChange={(value) => setData('fabric', value === 'none' ? '' : value)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select fabric" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">None</SelectItem>
+                                                        {fabrics.map((fabric) => (
+                                                            <SelectItem key={fabric} value={fabric}>
+                                                                {fabric}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    )}
 
-                                    {/* Row 3: Image */}
+                                    {/* Row 4: Image */}
                                     <div className="space-y-2">
                                         <Label htmlFor="item-image">Images *</Label>
                                             <div className="space-y-3">
