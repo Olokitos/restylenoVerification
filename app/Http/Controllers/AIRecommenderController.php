@@ -30,12 +30,21 @@ class AIRecommenderController extends Controller
                 'weather' => 'required|array',
                 'occasion' => 'nullable|string',
                 'max_recommendations' => 'nullable|integer|min:1|max:20',
+                'preferences' => 'nullable|array',
+                'preferences.preferredColors' => 'nullable|array',
+                'preferences.preferredCategories' => 'nullable|array',
+                'preferences.preferredBrands' => 'nullable|array',
+                'preferences.preferredOccasions' => 'nullable|array',
+                'preferences.avoidColors' => 'nullable|array',
+                'preferences.avoidCategories' => 'nullable|array',
+                'preferences.styleNotes' => 'nullable|string|max:500',
             ]);
 
             $user = \App\Models\User::find($request->user_id);
             $weatherData = $request->input('weather');
             $occasion = $request->input('occasion', 'casual');
             $maxRecommendations = $request->input('max_recommendations', 6);
+            $manualPreferences = $request->input('preferences', []);
             
             // Get user's wardrobe items
             $wardrobeItems = WardrobeItem::where('user_id', $user->id)->get();
@@ -98,7 +107,8 @@ class AIRecommenderController extends Controller
             }
             
             // Call Hugging Face API for embedding-based recommendations
-            $mlRecommendations = $this->getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $user->id, $maxRecommendations);
+            // Pass manual preferences to the method
+            $mlRecommendations = $this->getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $user->id, $maxRecommendations, $manualPreferences);
             
             if ($mlRecommendations === null) {
                 // Fallback to weather-based recommendations
@@ -153,12 +163,21 @@ class AIRecommenderController extends Controller
                 'weather' => 'required|array',
                 'occasion' => 'nullable|string',
                 'max_recommendations' => 'nullable|integer|min:1|max:20',
+                'preferences' => 'nullable|array',
+                'preferences.preferredColors' => 'nullable|array',
+                'preferences.preferredCategories' => 'nullable|array',
+                'preferences.preferredBrands' => 'nullable|array',
+                'preferences.preferredOccasions' => 'nullable|array',
+                'preferences.avoidColors' => 'nullable|array',
+                'preferences.avoidCategories' => 'nullable|array',
+                'preferences.styleNotes' => 'nullable|string|max:500',
             ]);
 
             $user = auth()->user();
             $weatherData = $request->input('weather');
             $occasion = $request->input('occasion', 'casual');
             $maxRecommendations = $request->input('max_recommendations', 6);
+            $manualPreferences = $request->input('preferences', []);
             
             // Get user's wardrobe items
             $wardrobeItems = WardrobeItem::where('user_id', $user->id)->get();
@@ -257,7 +276,8 @@ class AIRecommenderController extends Controller
             ];
 
             // Call Hugging Face API for embedding-based recommendations
-            $mlRecommendations = $this->getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $user->id, $maxRecommendations);
+            // Pass manual preferences to the method
+            $mlRecommendations = $this->getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $user->id, $maxRecommendations, $manualPreferences);
             
             if ($mlRecommendations === null) {
                 // Fallback to weather-based recommendations
@@ -828,6 +848,58 @@ class AIRecommenderController extends Controller
     }
 
     /**
+     * Get trending data from marketplace (categories, colors, styles)
+     */
+    private function getTrendingData($timeframe = '30 days'): array
+    {
+        $days = match($timeframe) {
+            '7 days' => 7,
+            '30 days' => 30,
+            '90 days' => 90,
+            default => 30,
+        };
+        
+        $since = now()->subDays($days);
+        
+        try {
+            // Most sold categories
+            $trendingCategories = \App\Models\Transaction::completed()
+                ->where('created_at', '>=', $since)
+                ->with('product.category')
+                ->get()
+                ->pluck('product.category.name')
+                ->filter()
+                ->countBy()
+                ->sortDesc()
+                ->take(5)
+                ->keys()
+                ->toArray();
+            
+            // Most sold colors
+            $trendingColors = \App\Models\Transaction::completed()
+                ->where('created_at', '>=', $since)
+                ->with('product')
+                ->get()
+                ->pluck('product.color')
+                ->filter()
+                ->map(fn($color) => strtolower(trim($color)))
+                ->countBy()
+                ->sortDesc()
+                ->take(5)
+                ->keys()
+                ->toArray();
+            
+            return [
+                'categories' => $trendingCategories,
+                'colors' => $trendingColors,
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Failed to get trending data: ' . $e->getMessage());
+            return ['categories' => [], 'colors' => []];
+        }
+    }
+
+    /**
      * Generate weather-based recommendations (fallback)
      */
     private function generateWeatherBasedRecommendations($filteredItems, $weatherData, $maxRecommendations = 6)
@@ -871,7 +943,7 @@ class AIRecommenderController extends Controller
     /**
      * Get embedding-based recommendations using Hugging Face
      */
-    private function getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $userId, $maxRecommendations = 6)
+    private function getEmbeddingBasedRecommendations($filteredItems, $weatherData, $occasion, $userId, $maxRecommendations = 6, $manualPreferences = [])
     {
         try {
             // Build query text from context
@@ -879,9 +951,35 @@ class AIRecommenderController extends Controller
             $condition = $weatherData['weather'][0]['main'] ?? 'Clear';
             $conditionLower = strtolower($condition);
             
-            $userPreferences = $this->getUserPreferencesFromFeedback($userId);
-            $preferredColors = implode(', ', $userPreferences['preferred_colors'] ?? []);
-            $preferredCategories = implode(', ', $userPreferences['preferred_categories'] ?? []);
+            // Get feedback-based preferences
+            $feedbackPreferences = $this->getUserPreferencesFromFeedback($userId);
+            
+            // Merge manual preferences with feedback-based preferences
+            // Manual preferences take priority (user explicitly set them)
+            $userPreferences = [
+                'preferred_colors' => !empty($manualPreferences['preferredColors']) 
+                    ? array_map('strtolower', $manualPreferences['preferredColors'])
+                    : ($feedbackPreferences['preferred_colors'] ?? []),
+                'preferred_categories' => !empty($manualPreferences['preferredCategories'])
+                    ? array_map('strtolower', $manualPreferences['preferredCategories'])
+                    : ($feedbackPreferences['preferred_categories'] ?? []),
+                'preferred_brands' => !empty($manualPreferences['preferredBrands'])
+                    ? array_map('strtolower', $manualPreferences['preferredBrands'])
+                    : ($feedbackPreferences['preferred_brands'] ?? []),
+                'preferred_occasions' => !empty($manualPreferences['preferredOccasions'])
+                    ? array_map('strtolower', $manualPreferences['preferredOccasions'])
+                    : ($feedbackPreferences['preferred_occasions'] ?? []),
+                'avoid_colors' => !empty($manualPreferences['avoidColors'])
+                    ? array_map('strtolower', $manualPreferences['avoidColors'])
+                    : [],
+                'avoid_categories' => !empty($manualPreferences['avoidCategories'])
+                    ? array_map('strtolower', $manualPreferences['avoidCategories'])
+                    : [],
+                'style_notes' => $manualPreferences['styleNotes'] ?? '',
+            ];
+            
+            $preferredColors = implode(', ', array_unique($userPreferences['preferred_colors']));
+            $preferredCategories = implode(', ', array_unique($userPreferences['preferred_categories']));
             
             // Rain is only valid for 24-32°C (Philippines climate)
             $isRainy = (str_contains($conditionLower, 'rain') || str_contains($conditionLower, 'drizzle') || 
@@ -919,66 +1017,127 @@ class AIRecommenderController extends Controller
                 $weatherGuidance = 'Cool weather. Wear jackets, sweaters, hoodies, long sleeves, pants. Avoid very thin clothing.';
             }
             
-            // Build smarter, more contextual AI query
-            $queryText = "Create an outfit recommendation for a {$occasion} occasion. ";
+            // Get trending data for boost scoring
+            $trendingData = $this->getTrendingData('30 days');
 
-            // Weather context with priority (rain only valid 24-32°C)
-            if ($isRainy) {
-                $queryText .= "CRITICAL: It is currently raining ({$condition}) at {$temp}°C. ";
-                $queryText .= "Prioritize rain protection: waterproof items, boots (not sandals), jackets, long pants. ";
-                if ($temp >= 24 && $temp < 30) {
-                    $queryText .= "Balance protection with breathability since it's warm. ";
-                } elseif ($temp >= 30) {
-                    $queryText .= "It's also hot, so prioritize lightweight waterproof/breathable materials. ";
-                }
-            } else {
-                $queryText .= "Weather conditions: {$temp}°C, {$condition}. ";
-                if ($weatherGuidance) {
-                    $queryText .= "{$weatherGuidance} ";
-                }
-            }
+            // Determine if weather is CRITICAL (requires priority)
+            $isCriticalWeather = $isRainy || $temp > 35 || $temp < 15;
 
-            // User preferences (personalization)
-            if ($preferredColors || $preferredCategories) {
-                $queryText .= "User's personal style preferences: ";
-                if ($preferredColors) {
-                    $queryText .= "favorite colors are {$preferredColors}. ";
-                }
-                if ($preferredCategories) {
-                    $queryText .= "prefers {$preferredCategories} items. ";
-                }
-                $queryText .= "Prioritize matching these preferences when possible, but weather protection takes priority over color preferences. ";
-            }
+            // Build AI query - Enhanced conditional approach
+            $queryText = "Create an outfit recommendation for a {$occasion} occasion";
 
-            // Fabric guidance
-            if ($fabricPreference) {
-                $queryText .= "{$fabricPreference} ";
-            }
-
-            // Smart context about conflicts
-            if ($isRainy && $preferredColors) {
-                $preferredColorsArray = explode(', ', $preferredColors);
-                $hasLightPreferredColor = false;
-                foreach ($preferredColorsArray as $color) {
-                    $colorLower = strtolower(trim($color));
-                    if (in_array($colorLower, ['white', 'cream', 'ivory', 'yellow', 'pink', 'lavender', 'mint', 'coral', 'beige', 'khaki', 'tan'])) {
-                        $hasLightPreferredColor = true;
-                        break;
+            if ($isCriticalWeather) {
+                // ========== CRITICAL WEATHER MODE ==========
+                $queryText .= ". ";
+                
+                if ($isRainy) {
+                    $queryText .= "⚠️ CRITICAL: It is currently raining ({$condition}) at {$temp}°C. ";
+                    $queryText .= "Weather protection is MANDATORY: waterproof items, boots (not sandals), jackets, long pants. ";
+                    if ($temp >= 24 && $temp < 30) {
+                        $queryText .= "Balance protection with breathability since it's warm. ";
+                    } elseif ($temp >= 30) {
+                        $queryText .= "It's also hot, so prioritize lightweight waterproof/breathable materials. ";
                     }
+                } elseif ($temp > 35) {
+                    $queryText .= ". ⚠️ CRITICAL: Extreme heat at {$temp}°C. ";
+                    $queryText .= "Heat protection is MANDATORY: ultra-light clothing, light colors, breathable fabrics. ";
+                    $queryText .= "Avoid dark colors, heavy fabrics, and outerwear. ";
+                } elseif ($temp < 15) {
+                    $queryText .= ". ⚠️ CRITICAL: Very cold at {$temp}°C. ";
+                    $queryText .= "Warmth protection is MANDATORY: jackets, sweaters, hoodies, warm layers. ";
                 }
                 
-                if ($hasLightPreferredColor) {
-                    $queryText .= "Note: User prefers light colors, but for rainy weather, prioritize functional items (boots, waterproof jackets, shoes) even if they're light colored, as protection is more important than color preference in rain. ";
+                // User preferences (secondary in critical weather)
+                if ($preferredColors || $preferredCategories) {
+                    $queryText .= "User's personal style preferences: ";
+                    if ($preferredColors) {
+                        $queryText .= "favorite colors are {$preferredColors}. ";
+                    }
+                    if ($preferredCategories) {
+                        $queryText .= "prefers {$preferredCategories} items. ";
+                    }
+                    // Add style notes if provided
+                    if (!empty($userPreferences['style_notes'])) {
+                        $queryText .= "Style notes: {$userPreferences['style_notes']}. ";
+                    }
+                    $queryText .= "Match these preferences ONLY if they don't conflict with weather protection requirements. ";
                 }
+                
+                // Fabric guidance
+                if ($fabricPreference) {
+                    $queryText .= "{$fabricPreference} ";
+                }
+                
+                // Final instruction for critical weather
+                $queryText .= "PRIORITY: Weather protection first (mandatory), then user preferences (optional). Select items that ensure safety and comfort.";
+                
+            } else {
+                // ========== NORMAL WEATHER MODE ==========
+                $queryText .= " that combines weather appropriateness, user's personal style, and current fashion trends. ";
+                
+                // Integrated weather + preferences + trends context
+                $weatherNeeds = [];
+                $preferenceNeeds = [];
+                $trendNeeds = [];
+                
+                // Weather requirements (normal conditions)
+                if ($temp >= 32) {
+                    $weatherNeeds[] = "ultra-light clothing (sleeveless, shirts, shorts, skirts, sandals)";
+                } elseif ($temp >= 27 && $temp < 32) {
+                    $weatherNeeds[] = "light, breathable clothing (shirts, t-shirts, shorts or light pants)";
+                } elseif ($temp >= 23 && $temp < 27) {
+                    $weatherNeeds[] = "versatile clothing (shirts, jeans, light jackets, dresses)";
+                } elseif ($temp >= 15 && $temp < 23) {
+                    $weatherNeeds[] = "warm layers (jackets, sweaters, hoodies, long sleeves, pants)";
+                }
+                
+                // User preferences
+                if ($preferredColors) {
+                    $preferenceNeeds[] = "user's favorite colors: {$preferredColors}";
+                }
+                if ($preferredCategories) {
+                    $preferenceNeeds[] = "user's preferred categories: {$preferredCategories}";
+                }
+                // Add style notes if provided
+                if (!empty($userPreferences['style_notes'])) {
+                    $preferenceNeeds[] = "user's style notes: {$userPreferences['style_notes']}";
+                }
+                
+                // Current trends
+                if (!empty($trendingData['categories'])) {
+                    $trendNeeds[] = "trending categories: " . implode(', ', $trendingData['categories']);
+                }
+                if (!empty($trendingData['colors'])) {
+                    $trendNeeds[] = "trending colors: " . implode(', ', $trendingData['colors']);
+                }
+                
+                // Combine all requirements
+                $allRequirements = array_merge($weatherNeeds, $preferenceNeeds, $trendNeeds);
+                
+                if (!empty($allRequirements)) {
+                    $queryText .= "Find items that match: " . implode(", ", $allRequirements) . ". ";
+                }
+                
+                // Add weather context
+                $queryText .= "Weather: {$temp}°C, {$condition}. ";
+                
+                // Priority guidance for normal weather
+                $queryText .= "Priority order: 1) Weather appropriateness, 2) User preferences (personal style), 3) Current trends (fashion relevance). ";
+                
+                // Fabric guidance
+                if ($fabricPreference) {
+                    $queryText .= "{$fabricPreference} ";
+                }
+                
+                // Final instruction for normal weather
+                $queryText .= "Select items that simultaneously satisfy weather needs, user preferences, and current trends when possible, creating a practical, personalized, and fashionable outfit.";
             }
-
-            // Final instruction
-            $queryText .= "Select items that best match the weather requirements first, then user preferences, ensuring a practical and stylish outfit combination.";
             
-            // Create text descriptions for each wardrobe item (include fabric)
+            // Create enhanced text descriptions for each wardrobe item (include size and fabric)
             $itemTexts = $filteredItems->map(function ($item) {
                 $fabricText = $item->fabric ? " made of {$item->fabric}" : '';
-                return "{$item->category} {$item->name} by {$item->brand} in {$item->color}{$fabricText}. {$item->description}";
+                $sizeText = $item->size ? " size {$item->size}" : '';
+                return "{$item->category} {$item->name} by {$item->brand} in {$item->color}{$sizeText}{$fabricText}. {$item->description}";
             })->toArray();
             
             // If no items, return null
@@ -999,19 +1158,137 @@ class AIRecommenderController extends Controller
             $queryEmbedding = $embeddings[0];
             $itemEmbeddings = array_slice($embeddings, 1);
             
-            // Calculate similarity scores
+            // Calculate multi-factor similarity scores
             $scoredItems = [];
             foreach ($filteredItems as $index => $item) {
                 $itemEmbedding = $itemEmbeddings[$index];
-                $similarity = $this->cosineSimilarity($queryEmbedding, $itemEmbedding);
+                $baseSimilarity = $this->cosineSimilarity($queryEmbedding, $itemEmbedding);
+                
+                // Multi-factor boost system
+                $weatherBoost = 0;
+                $preferenceBoost = 0;
+                $trendBoost = 0;
+                
+                $itemCategory = strtolower($item->category ?? '');
+                $itemColor = strtolower(trim($item->color ?? ''));
+                $itemFabric = strtolower($item->fabric ?? '');
+                
+                // 1. WEATHER BOOST (0-0.15)
+                if ($isCriticalWeather) {
+                    // Higher boost for critical weather matches
+                    if ($isRainy) {
+                        if (str_contains($itemCategory, 'boot') || str_contains($itemCategory, 'jacket') || 
+                            str_contains($itemCategory, 'pant') || str_contains($itemCategory, 'jean') ||
+                            str_contains($itemFabric, 'waterproof') || str_contains($itemCategory, 'shoe')) {
+                            $weatherBoost = 0.15; // Strong boost for rain protection
+                        }
+                    } elseif ($temp > 35) {
+                        if (str_contains($itemCategory, 'shirt') || str_contains($itemCategory, 'short') || 
+                            str_contains($itemCategory, 'sandal') || str_contains($itemCategory, 't-shirt') ||
+                            str_contains($itemCategory, 'polo') || str_contains($itemFabric, 'cotton') || 
+                            str_contains($itemFabric, 'linen')) {
+                            $weatherBoost = 0.15; // Strong boost for heat protection
+                        }
+                    } elseif ($temp < 15) {
+                        if (str_contains($itemCategory, 'jacket') || str_contains($itemCategory, 'sweater') || 
+                            str_contains($itemCategory, 'hoodie') || str_contains($itemFabric, 'wool') || 
+                            str_contains($itemFabric, 'fleece')) {
+                            $weatherBoost = 0.15; // Strong boost for warmth
+                        }
+                    }
+                } else {
+                    // Normal weather: lighter boost
+                    if ($temp > 30 && (str_contains($itemCategory, 'shirt') || str_contains($itemCategory, 'short') || 
+                        str_contains($itemCategory, 'sandal'))) {
+                        $weatherBoost = 0.05;
+                    } elseif ($temp < 20 && (str_contains($itemCategory, 'jacket') || str_contains($itemCategory, 'sweater') || 
+                        str_contains($itemCategory, 'hoodie'))) {
+                        $weatherBoost = 0.05;
+                    }
+                }
+                
+                // 2. PREFERENCE BOOST (0-0.10)
+                if (!empty($userPreferences['preferred_colors'])) {
+                    foreach ($userPreferences['preferred_colors'] as $prefColor) {
+                        if (str_contains($itemColor, $prefColor)) {
+                            $preferenceBoost += 0.05; // 5% per matching color
+                        }
+                    }
+                    $preferenceBoost = min(0.10, $preferenceBoost); // Cap at 10%
+                }
+                
+                if (!empty($userPreferences['preferred_categories'])) {
+                    foreach ($userPreferences['preferred_categories'] as $prefCategory) {
+                        if (str_contains($itemCategory, $prefCategory)) {
+                            $preferenceBoost += 0.05; // 5% per matching category
+                        }
+                    }
+                    $preferenceBoost = min(0.10, $preferenceBoost); // Cap at 10%
+                }
+                
+                // Apply avoid preferences (penalty)
+                if (!empty($userPreferences['avoid_colors'])) {
+                    foreach ($userPreferences['avoid_colors'] as $avoidColor) {
+                        if (str_contains($itemColor, $avoidColor)) {
+                            $preferenceBoost -= 0.10; // Penalty for avoided colors
+                        }
+                    }
+                }
+                
+                if (!empty($userPreferences['avoid_categories'])) {
+                    foreach ($userPreferences['avoid_categories'] as $avoidCategory) {
+                        if (str_contains($itemCategory, $avoidCategory)) {
+                            $preferenceBoost -= 0.10; // Penalty for avoided categories
+                        }
+                    }
+                }
+                
+                // Ensure preference boost doesn't go below 0
+                $preferenceBoost = max(0, $preferenceBoost);
+                
+                // 3. TREND BOOST (0-0.10) - Only in normal weather
+                if (!$isCriticalWeather && !empty($trendingData)) {
+                    // Category trend boost
+                    if (!empty($trendingData['categories'])) {
+                        foreach ($trendingData['categories'] as $trendCategory) {
+                            if (str_contains($itemCategory, strtolower($trendCategory))) {
+                                $trendBoost += 0.05; // 5% per trending category
+                            }
+                        }
+                    }
+                    
+                    // Color trend boost
+                    if (!empty($trendingData['colors'])) {
+                        foreach ($trendingData['colors'] as $trendColor) {
+                            if (str_contains($itemColor, strtolower($trendColor))) {
+                                $trendBoost += 0.03; // 3% per trending color
+                            }
+                        }
+                    }
+                    
+                    $trendBoost = min(0.10, $trendBoost); // Cap at 10%
+                }
+                
+                // Calculate final score (weighted combination)
+                if ($isCriticalWeather) {
+                    // Critical weather: Weather 60%, Embedding 30%, Preferences 10%
+                    $finalScore = ($baseSimilarity * 0.3) + ($weatherBoost * 0.6) + ($preferenceBoost * 0.1);
+                } else {
+                    // Normal weather: Embedding 50%, Weather 20%, Preferences 20%, Trends 10%
+                    $finalScore = ($baseSimilarity * 0.5) + ($weatherBoost * 0.2) + ($preferenceBoost * 0.2) + ($trendBoost * 0.1);
+                }
                 
                 $scoredItems[] = [
                     'item' => $item,
-                    'score' => $similarity,
+                    'score' => min(1.0, $finalScore), // Cap at 1.0
+                    'base_similarity' => $baseSimilarity,
+                    'weather_boost' => $weatherBoost,
+                    'preference_boost' => $preferenceBoost,
+                    'trend_boost' => $trendBoost,
                 ];
             }
             
-            // Sort by similarity score (highest first)
+            // Sort by final score (highest first)
             usort($scoredItems, function ($a, $b) {
                 return $b['score'] <=> $a['score'];
             });
