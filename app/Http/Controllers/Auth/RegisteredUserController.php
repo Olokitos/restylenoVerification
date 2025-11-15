@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +42,8 @@ class RegisteredUserController extends Controller
             'email_verified_at' => now(), // Auto-verify users on registration
         ]);
 
-        event(new Registered($user));
+        // Note: Registered event removed to prevent email sending timeout
+        // Email verification is disabled, so no need to send verification email
 
         Auth::login($user);
 
