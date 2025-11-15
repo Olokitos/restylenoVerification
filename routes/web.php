@@ -59,6 +59,26 @@ Route::get('/raw-html-test', function () {
     return response()->view('raw-test');
 });
 
+// Test email sending route
+Route::get('/test-email', function () {
+    try {
+        \Illuminate\Support\Facades\Mail::raw('Test email from SendGrid!', function($msg) {
+            $msg->to('kenlloydbrazal@gmail.com')
+                ->subject('SendGrid Test - Email Verification');
+        });
+        return response()->json([
+            'status' => 'success',
+            'message' => '✅ Email sent successfully! Check your inbox at kenlloydbrazal@gmail.com'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => '❌ Error: ' . $e->getMessage(),
+            'trace' => config('app.debug') ? $e->getTraceAsString() : null
+        ], 500);
+    }
+});
+
 // Minimal Inertia test route
 Route::get('/minimal-inertia', function () {
     return Inertia::render('simple-dashboard', [
