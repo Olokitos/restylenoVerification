@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,10 @@ import {
   XCircle,
   Package,
   User,
-  CreditCard
+  CreditCard,
+  Wallet,
+  Building2,
+  RefreshCw
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 
@@ -35,10 +38,18 @@ interface Transaction {
   buyer: {
     id: number;
     name: string;
+    gcash_number?: string | null;
+    bank_name?: string | null;
+    bank_account_number?: string | null;
+    bank_account_name?: string | null;
   };
   seller: {
     id: number;
     name: string;
+    gcash_number?: string | null;
+    bank_name?: string | null;
+    bank_account_number?: string | null;
+    bank_account_name?: string | null;
   };
 }
 
@@ -52,7 +63,16 @@ interface PendingPaymentsProps {
   };
 }
 
-export default function PendingPayments({ transactions }: PendingPaymentsProps) {
+export default function PendingPayments({ transactions: initialTransactions }: PendingPaymentsProps) {
+  const page = usePage();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPageVisibleRef = useRef(true);
+  
+  // Get transactions from page props (updates automatically with Inertia)
+  const transactions = (page.props as any).transactions || initialTransactions;
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -70,10 +90,87 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
     });
   };
 
-  const { flash, errors } = usePage().props as {
+  const { flash, errors } = page.props as {
     flash?: { success?: string; error?: string };
     errors?: Record<string, string>;
   };
+
+  // Auto-refresh function
+  const refreshTransactions = async (showLoading = false) => {
+    if (showLoading) {
+      setIsRefreshing(true);
+    }
+    
+    try {
+      const currentPage = transactions.current_page || 1;
+      const url = `/admin/transactions/pending-payments${currentPage > 1 ? `?page=${currentPage}` : ''}`;
+      
+      router.get(url, {}, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['transactions'],
+        onSuccess: () => {
+          setLastRefresh(new Date());
+        },
+        onFinish: () => {
+          if (showLoading) {
+            setIsRefreshing(false);
+          }
+        },
+      });
+    } catch (error) {
+      console.error('Error refreshing transactions:', error);
+      if (showLoading) {
+        setIsRefreshing(false);
+      }
+    }
+  };
+
+  // Set up auto-refresh polling
+  useEffect(() => {
+    // Refresh every 30 seconds when page is visible
+    const startPolling = () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+      
+      refreshIntervalRef.current = setInterval(() => {
+        if (isPageVisibleRef.current) {
+          refreshTransactions(false);
+        }
+      }, 30000); // 30 seconds
+    };
+
+    startPolling();
+
+    // Handle page visibility changes
+    const handleVisibilityChange = () => {
+      isPageVisibleRef.current = !document.hidden;
+      
+      if (!document.hidden) {
+        // Page became visible, refresh immediately and restart polling
+        refreshTransactions(false);
+        startPolling();
+      } else {
+        // Page is hidden, clear interval to save resources
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup on unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [transactions.current_page]);
+
 
   const handleVerifyPayment = (transactionId: number) => {
     if (confirm('Are you sure you want to verify this payment? This will mark the payment as collected by the platform.')) {
@@ -100,13 +197,30 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-                  <Clock className="mr-3 h-8 w-8" />
-                  Pending Payment Verifications
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
-                  Review and verify customer payments to platform
-                </p>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <Clock className="mr-3 h-8 w-8" />
+                    Pending Payment Verifications
+                  </h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => refreshTransactions(true)}
+                    disabled={isRefreshing}
+                    className="h-8 w-8"
+                    title="Refresh transactions"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Review and verify customer payments to platform
+                  </p>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Last refreshed: {lastRefresh.toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
               <Link href="/admin/commissions">
                 <Button variant="outline">
@@ -299,6 +413,109 @@ export default function PendingPayments({ transactions }: PendingPaymentsProps) 
                               </div>
                               <span className="hidden sm:inline text-gray-600 dark:text-gray-400">•</span>
                               <span className="text-gray-600 dark:text-gray-400">{formatDate(transaction.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payment Information */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Buyer Payment Info */}
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              Buyer Payment Details
+                            </h4>
+                            <div className="pl-6 space-y-1.5 text-xs sm:text-sm">
+                              {transaction.buyer.gcash_number ? (
+                                <div className="flex items-center space-x-2">
+                                  <Wallet className="h-3.5 w-3.5 text-green-600" />
+                                  <span className="text-gray-600 dark:text-gray-400">GCash:</span>
+                                  <span className="font-mono font-semibold text-gray-900 dark:text-white">
+                                    {transaction.buyer.gcash_number}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {transaction.buyer.bank_name && transaction.buyer.bank_account_number ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <Building2 className="h-3.5 w-3.5 text-blue-600" />
+                                    <span className="text-gray-600 dark:text-gray-400">Bank:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                      {transaction.buyer.bank_name}
+                                    </span>
+                                  </div>
+                                  <div className="pl-5 space-y-0.5">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500 dark:text-gray-500">Account #:</span>
+                                      <span className="font-mono font-semibold text-gray-900 dark:text-white">
+                                        {transaction.buyer.bank_account_number}
+                                      </span>
+                                    </div>
+                                    {transaction.buyer.bank_account_name && (
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-gray-500 dark:text-gray-500">Account Name:</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                          {transaction.buyer.bank_account_name}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+                              {!transaction.buyer.gcash_number && !transaction.buyer.bank_account_number && (
+                                <p className="text-gray-500 dark:text-gray-400 italic">No payment details available</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Seller Payment Info */}
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              Seller Payment Details
+                            </h4>
+                            <div className="pl-6 space-y-1.5 text-xs sm:text-sm">
+                              {transaction.seller.gcash_number ? (
+                                <div className="flex items-center space-x-2">
+                                  <Wallet className="h-3.5 w-3.5 text-green-600" />
+                                  <span className="text-gray-600 dark:text-gray-400">GCash:</span>
+                                  <span className="font-mono font-semibold text-gray-900 dark:text-white">
+                                    {transaction.seller.gcash_number}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {transaction.seller.bank_name && transaction.seller.bank_account_number ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <Building2 className="h-3.5 w-3.5 text-blue-600" />
+                                    <span className="text-gray-600 dark:text-gray-400">Bank:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                      {transaction.seller.bank_name}
+                                    </span>
+                                  </div>
+                                  <div className="pl-5 space-y-0.5">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500 dark:text-gray-500">Account #:</span>
+                                      <span className="font-mono font-semibold text-gray-900 dark:text-white">
+                                        {transaction.seller.bank_account_number}
+                                      </span>
+                                    </div>
+                                    {transaction.seller.bank_account_name && (
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-gray-500 dark:text-gray-500">Account Name:</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                          {transaction.seller.bank_account_name}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+                              {!transaction.seller.gcash_number && !transaction.seller.bank_account_number && (
+                                <p className="text-gray-500 dark:text-gray-400 italic">No payment details available</p>
+                              )}
                             </div>
                           </div>
                         </div>
