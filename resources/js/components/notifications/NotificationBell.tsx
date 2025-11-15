@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Bell, Check, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,7 @@ export default function NotificationBell() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
+    const prevUnreadCountRef = useRef(0);
 
     const csrfToken = useMemo(() => {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -42,7 +43,9 @@ export default function NotificationBell() {
             if (response.ok) {
                 const data = await response.json();
                 setNotifications(data.notifications?.data || []);
-                setUnreadCount(data.unread_count || 0);
+                const newCount = data.unread_count || 0;
+                setUnreadCount(newCount);
+                prevUnreadCountRef.current = newCount;
             }
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -56,7 +59,16 @@ export default function NotificationBell() {
             const response = await fetch('/api/notifications/unread-count');
             if (response.ok) {
                 const data = await response.json();
-                setUnreadCount(data.count || 0);
+                const newCount = data.count || 0;
+                const prevCount = prevUnreadCountRef.current;
+                
+                // If unread count increased, refresh notifications list
+                if (newCount > prevCount) {
+                    fetchNotifications();
+                } else {
+                    setUnreadCount(newCount);
+                    prevUnreadCountRef.current = newCount;
+                }
             }
         } catch (error) {
             console.error('Error fetching unread count:', error);
@@ -69,17 +81,53 @@ export default function NotificationBell() {
             return;
         }
         
+        // Initial fetch
         fetchNotifications();
-        // Poll for new notifications every 30 seconds
-        const interval = setInterval(fetchUnreadCount, 30000);
-        return () => clearInterval(interval);
-    }, [auth.user]);
+        
+        // Poll for new notifications every 3 seconds (similar to chat polling)
+        const unreadCountInterval = setInterval(fetchUnreadCount, 3000);
+        
+        // Also refresh full notifications every 10 seconds when dropdown is closed
+        const notificationsInterval = setInterval(() => {
+            if (!open) {
+                fetchNotifications();
+            }
+        }, 10000);
+        
+        return () => {
+            clearInterval(unreadCountInterval);
+            clearInterval(notificationsInterval);
+        };
+    }, [auth.user, open]);
 
     useEffect(() => {
         if (open && auth.user) {
             fetchNotifications();
         }
     }, [open, auth.user]);
+
+    // Add visibility change handler to pause polling when tab is hidden
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // Tab is hidden, polling will continue but less frequently
+                return;
+            } else {
+                // Tab is visible again, refresh immediately
+                if (auth.user) {
+                    fetchUnreadCount();
+                    if (!open) {
+                        fetchNotifications();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [auth.user, open]);
 
     const markAsRead = async (notificationId: number) => {
         try {

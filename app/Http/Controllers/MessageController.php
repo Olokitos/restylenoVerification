@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -77,7 +78,7 @@ class MessageController extends Controller
                     'message' => $message->message,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender->name,
-                    'is_read' => $message->is_read,
+                    'is_read' => (bool) ($message->is_read ?? false), // Ensure boolean, default to false
                     'created_at' => $message->created_at,
                     'is_own' => $message->sender_id === auth()->id(),
                 ];
@@ -153,10 +154,27 @@ class MessageController extends Controller
             'conversation_id' => $conversation->id,
             'sender_id' => auth()->id(),
             'message' => $request->message,
+            'is_read' => false, // Explicitly set to false for new messages
         ]);
 
         // Update conversation's last message time
         $conversation->update(['last_message_at' => now()]);
+
+        // Create notification for the recipient
+        $recipientId = $conversation->user1_id === auth()->id() ? $conversation->user2_id : $conversation->user1_id;
+        $recipient = User::find($recipientId);
+        if ($recipient) {
+            $senderName = auth()->user()->name;
+            $messagePreview = strlen($request->message) > 50 ? substr($request->message, 0, 50) . '...' : $request->message;
+            
+            NotificationService::message(
+                $recipient,
+                'New Message from ' . $senderName,
+                $messagePreview,
+                $conversation,
+                "/messages/{$conversation->id}"
+            );
+        }
 
         return redirect()->route('messages.show', $conversation)
             ->with('success', 'Message sent successfully!');
@@ -180,10 +198,27 @@ class MessageController extends Controller
             'conversation_id' => $conversation->id,
             'sender_id' => auth()->id(),
             'message' => $request->message,
+            'is_read' => false, // Explicitly set to false for new messages
         ]);
 
         // Update conversation's last message time
         $conversation->update(['last_message_at' => now()]);
+
+        // Create notification for the recipient (only if not viewing the conversation)
+        $recipientId = $conversation->user1_id === auth()->id() ? $conversation->user2_id : $conversation->user1_id;
+        $recipient = User::find($recipientId);
+        if ($recipient) {
+            $senderName = auth()->user()->name;
+            $messagePreview = strlen($request->message) > 50 ? substr($request->message, 0, 50) . '...' : $request->message;
+            
+            NotificationService::message(
+                $recipient,
+                'New Message from ' . $senderName,
+                $messagePreview,
+                $conversation,
+                "/messages/{$conversation->id}"
+            );
+        }
 
         // Load sender relationship
         $message->load('sender');
@@ -197,7 +232,7 @@ class MessageController extends Controller
                     'message' => $message->message,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender->name,
-                    'is_read' => $message->is_read,
+                    'is_read' => (bool) ($message->is_read ?? false), // Ensure boolean, default to false
                     'created_at' => $message->created_at->toISOString(),
                     'is_own' => $message->sender_id === auth()->id(),
                 ],
@@ -236,7 +271,7 @@ class MessageController extends Controller
                     'message' => $message->message,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender->name,
-                    'is_read' => $message->is_read,
+                    'is_read' => (bool) ($message->is_read ?? false), // Ensure boolean, default to false
                     'created_at' => $message->created_at->toISOString(),
                     'is_own' => $message->sender_id === auth()->id(),
                 ];
