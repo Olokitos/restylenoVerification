@@ -146,7 +146,7 @@ return [
     'features' => [
         // Features::registration(),
         // Features::resetPasswords(),
-        // Features::emailVerification(),
+        // Features::emailVerification(), // Disabled - using Laravel's built-in email verification with Inertia
         // Features::updateProfileInformation(),
         // Features::updatePasswords(),
         Features::twoFactorAuthentication([

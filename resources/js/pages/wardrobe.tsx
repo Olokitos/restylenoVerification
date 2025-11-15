@@ -3591,24 +3591,9 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                         </div>
                                     </div>
 
-                                    {/* Row 3: Description and Image */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="item-description">Style Notes</Label>
-                                            <Textarea
-                                                id="item-description"
-                                                placeholder="Any additional notes about this item..."
-                                                value={data.description}
-                                                onChange={(e) => setData('description', e.target.value)}
-                                                maxLength={200}
-                                                rows={4}
-                                                className="resize-none"
-                                            />
-                                            {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
-                                            <p className="text-xs text-gray-500">{data.description.length}/200 characters</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="item-image">Images *</Label>
+                                    {/* Row 3: Image */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="item-image">Images *</Label>
                                             <div className="space-y-3">
                                                 {/* Initial upload button */}
                                                 {imagePreviews.length === 0 && (
@@ -3710,7 +3695,6 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                 
                                                 {errors.images && <p className="text-red-500 text-sm">{errors.images}</p>}
                                             </div>
-                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-end space-x-2">

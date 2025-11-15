@@ -1,11 +1,12 @@
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
+import EmailVerificationNotificationController from '@/actions/App/Http/Controllers/Auth/EmailVerificationNotificationController';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import React, { useRef, useState } from 'react';
-import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { User, Mail, Lock, Shield, Trash2, CheckCircle, AlertCircle, Eye, EyeOff, Save, Key, UserCheck, Palette, Globe, ArrowLeft, Settings, Edit3, Upload, Image as ImageIcon, CreditCard, Send, LoaderCircle } from 'lucide-react';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -535,32 +536,71 @@ export default function Profile({
                                         </div>
 
                                         {mustVerifyEmail && auth.user.email_verified_at === null && (
-                                            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                                                <div className="flex items-start space-x-3">
-                                                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                                                    <div className="flex-1">
-                                                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                                            Your email address is unverified. Please check your email for a verification link.
-                                                        </p>
-                                                        <Link
-                                                            href={send()}
-                                                            as="button"
-                                                            className="mt-2 text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:text-yellow-600 dark:hover:text-yellow-200 underline"
-                                                        >
-                                                            Resend verification email
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                                {status === 'verification-link-sent' && (
-                                                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
-                                                        <div className="flex items-center space-x-2">
-                                                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                                                                Verification email sent! Check your inbox.
-                                                            </span>
+                                            <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm">
+                                                <div className="flex items-start space-x-4">
+                                                    <div className="flex-shrink-0">
+                                                        <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full">
+                                                            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                                                         </div>
                                                     </div>
-                                                )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                                                            Verify Your Email Address
+                                                        </h3>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                                                            To ensure the security of your account and access all features, please verify your email address. 
+                                                            We'll send a verification link to <span className="font-medium text-gray-900 dark:text-white">{auth.user.email}</span>.
+                                                        </p>
+                                                        {status === 'verification-link-sent' ? (
+                                                            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
+                                                                <div className="flex items-center space-x-3">
+                                                                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                                                    <div>
+                                                                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                                            Verification email sent successfully!
+                                                                        </p>
+                                                                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                                                            Please check your inbox and click the verification link. If you don't see it, check your spam folder.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                <div className="flex items-start space-x-3">
+                                                                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                                                                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                                                                        Your email address is not verified. Click the button below to receive a verification link.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <Form
+                                                            {...EmailVerificationNotificationController.store.form()}
+                                                            className="inline-block"
+                                                        >
+                                                            {({ processing }) => (
+                                                                <Button
+                                                                    type="submit"
+                                                                    disabled={processing}
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2.5 h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                >
+                                                                    {processing ? (
+                                                                        <>
+                                                                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                                            Sending...
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <Send className="mr-2 h-4 w-4" />
+                                                                            {status === 'verification-link-sent' ? 'Resend Verification Email' : 'Send Verification Email'}
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                        </Form>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
 
