@@ -40,18 +40,16 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'email_verified_at' => now(), // Auto-verify users on registration
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        // Send email verification notification
-        $user->sendEmailVerificationNotification();
-
         $request->session()->regenerate();
 
-        // Redirect to verification notice instead of dashboard
-        return redirect()->route('verification.notice');
+        // Redirect to dashboard (email verification disabled)
+        return redirect()->route('dashboard');
     }
 }

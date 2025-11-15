@@ -10,14 +10,15 @@ class EmailVerificationNotificationController extends Controller
 {
     /**
      * Send a new email verification notification.
+     * Email verification is disabled - this method does nothing.
      */
     public function store(Request $request): RedirectResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+        // Email verification disabled - auto-verify users instead
+        if (!$request->user()->hasVerifiedEmail()) {
+            $request->user()->email_verified_at = now();
+            $request->user()->save();
         }
-
-        $request->user()->sendEmailVerificationNotification();
 
         return back()->with('status', 'verification-link-sent');
     }
