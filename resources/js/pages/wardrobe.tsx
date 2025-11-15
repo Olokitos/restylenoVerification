@@ -47,7 +47,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const categories = ['T-shirt', 'Polo', 'Pants', 'Jeans', 'Shorts', 'Dress', 'Shoes', 'Boots', 'Hat', 'Jacket', 'Accessories'];
+const categories = Array.from(new Set(['T-shirt', 'Polo', 'Pants', 'Jeans', 'Shorts', 'Skirts', 'Dress', 'Shoes', 'Sandals', 'Boots', 'Sweaters', 'Long Sleeves', 'Hoodie', 'Hat', 'Jacket', 'Accessories']));
 const colors = [
   'Black',
   'White',
@@ -192,109 +192,134 @@ const canFormValidOutfit = (items: WardrobeItem[]): boolean => {
     return hasDress || (hasTop && hasBottom);
 };
 
+// Helper function to determine Philippines season based on current month
+// Dry Season: November to April (months 11, 12, 1, 2, 3, 4)
+// Wet Season: May to October (months 5, 6, 7, 8, 9, 10)
+const getPhilippinesSeason = (): 'dry' | 'wet' => {
+    const month = new Date().getMonth() + 1; // getMonth() returns 0-11, so +1 for 1-12
+    return (month >= 11 || month <= 4) ? 'dry' : 'wet';
+};
+
 const getWeatherProfile = (temp: number, condition: string) => {
     const normalizedCondition = condition.toLowerCase();
+    const season = getPhilippinesSeason(); // Determine current season
+    const isRainy = normalizedCondition.includes('rain') || normalizedCondition === 'rainy' || 
+                    normalizedCondition.includes('drizzle') || normalizedCondition.includes('thunderstorm');
 
-    if (temp >= 30 || normalizedCondition.includes('hot')) {
+    // WET SEASON (May to October) - Priority check for rainy conditions
+    // Even during wet season months, if it's actually raining, prioritize wet season logic
+    if (season === 'wet' || isRainy) {
+        // During wet season or when raining, prefer dark colors and protective clothing
         return {
-            label: 'hot weather',
-            // Light colors that reflect heat: white, light blue, beige, pastels
-            preferredColors: ['white', 'light', 'beige', 'cream', 'pastel', 'sky', 'ivory', 'pearl'],
-            preferred: ['shirt', 't-shirt', 'dress', 'tank', 'short', 'skirt', 'sandal', 'linen', 'light', 'cotton', 'breathable'],
-            avoid: ['coat', 'jacket', 'sweater', 'hoodie', 'boot', 'black', 'dark', 'navy', 'brown'],
-            // Temperature-specific settings
-            tempRange: 'hot',
-            maxOuterwearScore: -5, // Strongly penalize outerwear in hot weather
-            preferLightOuterwear: true,
+            label: season === 'wet' ? 'wet season (rainy)' : 'wet season (rainy weather)',
+            // Dark colors from system that hide water marks
+            preferredColors: ['Black', 'Navy', 'Blue', 'Gray', 'Charcoal', 'Maroon', 'Brown', 'Teal', 'Emerald', 'Olive', 'Purple', 'Violet'],
+            preferred: ['jacket', 'hoodie', 'windbreaker', 'long sleeve', 'pant', 'jean', 'boot', 'waterproof'],
+            avoid: ['sandal', 'open', 'short', 'skirt', 'dress', 'White', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint', 'Coral', 'Beige', 'Khaki', 'Tan'],
+            tempRange: 'rainy',
+            maxOuterwearScore: 3,
+            preferLightOuterwear: false,
         };
     }
 
-    // Warm weather (24-29°C): Prefer light outerwear or no outerwear
+    // DRY SEASON (November to April) - Hot & Sunny
+    // During dry season, prioritize light colors and breathable clothing
+    if (season === 'dry') {
+        if (temp >= 30 || normalizedCondition.includes('hot') || normalizedCondition.includes('clear')) {
+            return {
+                label: 'dry season (hot)',
+                // Light colors from system that reflect heat
+                preferredColors: ['White', 'Sky Blue', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint', 'Coral', 'Turquoise', 'Beige', 'Khaki', 'Tan', 'Silver'],
+                preferred: ['shirt', 't-shirt', 'polo', 'dress', 'tank', 'short', 'skirt', 'sandal', 'linen', 'light', 'cotton', 'breathable'],
+                avoid: ['coat', 'jacket', 'sweater', 'hoodie', 'boot', 'Black', 'Navy', 'Brown', 'Charcoal', 'Maroon'],
+                tempRange: 'hot',
+                maxOuterwearScore: -5,
+                preferLightOuterwear: true,
+            };
+        }
+
+        // Warm weather during dry season (24-29°C)
+        if (temp >= 24 && temp < 30) {
+            return {
+                label: 'dry season (warm)',
+                // Light to medium colors from system
+                preferredColors: ['White', 'Sky Blue', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint', 'Coral', 'Turquoise', 'Beige', 'Blue', 'Green', 'Teal'],
+                preferred: ['shirt', 't-shirt', 'polo', 'dress', 'short', 'skirt', 'sandal', 'linen', 'light', 'cotton', 'breathable', 'light jacket', 'windbreaker'],
+                avoid: ['heavy jacket', 'coat', 'sweater', 'Black', 'Navy', 'Charcoal'],
+                tempRange: 'warm',
+                maxOuterwearScore: -2,
+                preferLightOuterwear: true,
+            };
+        }
+    }
+
+    // WARM WEATHER (24-29°C) - Typical Philippine temperature (fallback)
     if (temp >= 24 && temp < 30) {
         return {
             label: 'warm weather',
-            preferredColors: ['white', 'light', 'beige', 'cream', 'pastel', 'sky', 'ivory', 'pearl', 'blue', 'green'],
-            preferred: ['shirt', 't-shirt', 'dress', 'short', 'skirt', 'sandal', 'linen', 'light', 'cotton', 'breathable', 'light jacket', 'windbreaker'],
-            avoid: ['heavy jacket', 'coat', 'sweater', 'black', 'dark', 'navy'],
+            // Light to medium colors from system
+            preferredColors: ['White', 'Sky Blue', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint', 'Coral', 'Turquoise', 'Beige', 'Blue', 'Green', 'Teal'],
+            preferred: ['shirt', 't-shirt', 'polo', 'dress', 'short', 'skirt', 'sandal', 'linen', 'light', 'cotton', 'breathable', 'light jacket', 'windbreaker'],
+            avoid: ['heavy jacket', 'coat', 'sweater', 'Black', 'Navy', 'Charcoal'],
             tempRange: 'warm',
-            maxOuterwearScore: -2, // Penalize heavy outerwear in warm weather
+            maxOuterwearScore: -2,
             preferLightOuterwear: true,
         };
     }
 
-    // Cool weather (16-23°C): Light to medium outerwear optional
-    if (temp >= 16 && temp < 24) {
+    // MILD WEATHER (20-23°C)
+    if (temp >= 20 && temp < 24) {
         const baseProfile = {
             label: 'mild weather',
-            preferredColors: [] as string[],
-            preferred: ['shirt', 't-shirt', 'jean', 'pant', 'dress', 'skirt', 'sneaker', 'light jacket', 'cardigan'],
+            preferredColors: ['Blue', 'Green', 'Teal', 'Gray', 'Beige', 'Navy'],
+            preferred: ['shirt', 't-shirt', 'polo', 'jean', 'pant', 'dress', 'skirt', 'sneaker', 'light jacket', 'cardigan'],
             avoid: [] as string[],
             tempRange: 'mild',
-            maxOuterwearScore: 1, // Outerwear is optional but not penalized
+            maxOuterwearScore: 1,
             preferLightOuterwear: true,
         };
 
-        if (normalizedCondition.includes('rain') || normalizedCondition === 'rainy') {
-            baseProfile.preferred.push('jacket', 'hoodie', 'coat', 'boot', 'waterproof', 'long sleeve', 'pant', 'jean');
+        // Rainy condition in mild weather (wet season logic)
+        if (isRainy || season === 'wet') {
+            baseProfile.preferred.push('jacket', 'hoodie', 'windbreaker', 'boot', 'waterproof', 'long sleeve', 'pant', 'jean');
             baseProfile.avoid.push('sandal', 'open', 'short', 'skirt', 'dress');
-            baseProfile.preferredColors.push('dark', 'black', 'navy', 'waterproof');
-            baseProfile.maxOuterwearScore = 3; // Outerwear is important for rain
-            baseProfile.preferLightOuterwear = false; // Any outerwear is good for rain
+            baseProfile.preferredColors = ['Black', 'Navy', 'Blue', 'Gray', 'Charcoal', 'Maroon', 'Brown'];
+            baseProfile.maxOuterwearScore = 3;
+            baseProfile.preferLightOuterwear = false;
         }
 
         if (normalizedCondition.includes('wind')) {
-            baseProfile.preferred.push('jacket', 'windbreaker', 'scarf');
+            baseProfile.preferred.push('jacket', 'windbreaker');
             baseProfile.maxOuterwearScore = 2;
         }
 
         return baseProfile;
     }
 
-    // Cold weather (≤15°C): Outerwear recommended
-    if (temp <= 15) {
+    // COOL WEATHER (<20°C) - Very rare in Philippines
+    if (temp < 20) {
         return {
             label: 'cool weather',
-            preferredColors: ['dark', 'black', 'navy', 'brown', 'gray', 'warm'],
-            preferred: ['coat', 'jacket', 'sweater', 'hoodie', 'long sleeve', 'pant', 'jean', 'boot', 'warm'],
-            avoid: ['short', 'tank', 'sandal', 'white', 'light'],
+            // Dark/warm colors from system
+            preferredColors: ['Black', 'Navy', 'Brown', 'Gray', 'Charcoal', 'Maroon', 'Olive', 'Purple', 'Violet'],
+            preferred: ['jacket', 'sweater', 'hoodie', 'long sleeve', 'pant', 'jean', 'boot'],
+            avoid: ['short', 'tank', 'sandal', 'White', 'Cream', 'Ivory', 'Yellow', 'Pink', 'Lavender', 'Mint'],
             tempRange: 'cool',
-            maxOuterwearScore: 5, // Strongly prefer outerwear in cool weather
-            preferLightOuterwear: false, // Heavier is better when cold
+            maxOuterwearScore: 3,
+            preferLightOuterwear: false,
         };
     }
 
-    // Fallback for any edge cases
-    const baseProfile = {
+    // Fallback
+    return {
         label: 'mild weather',
         preferredColors: [] as string[],
-        preferred: ['shirt', 't-shirt', 'jean', 'pant', 'dress', 'skirt', 'sneaker'],
+        preferred: ['shirt', 't-shirt', 'polo', 'jean', 'pant', 'dress', 'skirt', 'sneaker'],
         avoid: [] as string[],
         tempRange: 'mild',
         maxOuterwearScore: 0,
         preferLightOuterwear: true,
     };
-
-    if (normalizedCondition.includes('rain') || normalizedCondition === 'rainy') {
-        baseProfile.preferred.push('jacket', 'hoodie', 'coat', 'boot', 'waterproof', 'long sleeve', 'pant', 'jean');
-        baseProfile.avoid.push('sandal', 'open', 'short', 'skirt', 'dress');
-        baseProfile.preferredColors.push('dark', 'black', 'navy', 'waterproof');
-        baseProfile.maxOuterwearScore = 3;
-        baseProfile.preferLightOuterwear = false;
-    }
-
-    if (normalizedCondition.includes('wind')) {
-        baseProfile.preferred.push('jacket', 'windbreaker', 'scarf');
-        baseProfile.maxOuterwearScore = 2;
-    }
-
-    if (normalizedCondition.includes('snow')) {
-        baseProfile.preferred.push('coat', 'boot', 'thermal');
-        baseProfile.avoid.push('short', 'dress', 'skirt');
-        baseProfile.maxOuterwearScore = 5;
-        baseProfile.preferLightOuterwear = false;
-    }
-
-    return baseProfile;
 };
 
 type WeatherSuggestionResult = PreferenceFallbackResult;
@@ -1998,7 +2023,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
     });
 
     const sizeOptions = useMemo(() => {
-        if (data.category === 'Shoes' || data.category === 'Boots') {
+        if (data.category === 'Shoes' || data.category === 'Boots' || data.category === 'Sandals') {
             return shoeSizes;
         }
         if (data.category === 'Jeans' || data.category === 'Pants' || data.category === 'Shorts') {
@@ -2014,6 +2039,11 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         if (data.category === 'Accessories' || data.category === 'Hat') {
             setData('size', '');
             return;
+        }
+
+        // Clear fabric field when Sandals is selected
+        if (data.category === 'Sandals') {
+            setData('fabric', '');
         }
 
         // Clear size if it's not valid for the current category
@@ -2048,6 +2078,11 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
         // Ensure size is cleared for Hat and Accessories
         if (data.category === 'Hat' || data.category === 'Accessories') {
             setData('size', '');
+        }
+        
+        // Ensure fabric is cleared for Sandals
+        if (data.category === 'Sandals') {
+            setData('fabric', '');
         }
         
         // Prepare submission - if images array has files, clear single image; otherwise clear images array
@@ -2626,7 +2661,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                             const categoryOrder = ['tops', 'bottoms', 'dresses', 'outerwear', 'footwear', 'accessories', 'others'];
                                                             
                                                             // Group items by category
-                                                            const groupedItems = aiSuggestion.items.reduce<Record<string, WardrobeItem[]>>((acc, item) => {
+                                                            const groupedItems = aiSuggestion.items.reduce<Record<string, WardrobeItem[]>>((acc: Record<string, WardrobeItem[]>, item: WardrobeItem) => {
                                                                 const category = classifyCategory(item.category || '');
                                                                 if (!acc[category]) {
                                                                     acc[category] = [];
@@ -3563,7 +3598,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                 <Label htmlFor="item-size">
                                                     {data.category === 'Shorts' || data.category === 'Jeans' || data.category === 'Pants' 
                                                         ? 'Waist Size *' 
-                                                        : data.category === 'Boots' || data.category === 'Shoes'
+                                                        : data.category === 'Boots' || data.category === 'Shoes' || data.category === 'Sandals'
                                                         ? 'Shoe Size *'
                                                         : 'Size *'}
                                                 </Label>
@@ -3572,7 +3607,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                         <SelectValue placeholder={
                                                             data.category === 'Shorts' || data.category === 'Jeans' || data.category === 'Pants'
                                                                 ? 'Select waist size'
-                                                                : data.category === 'Boots' || data.category === 'Shoes'
+                                                                : data.category === 'Boots' || data.category === 'Shoes' || data.category === 'Sandals'
                                                                 ? 'Select shoe size'
                                                                 : 'Select size'
                                                         } />
@@ -3611,7 +3646,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                     </div>
                                     
                                     {/* Row 3: Fabric (only shown when size field is visible, since fabric is already in the grid above for Hat/Accessories) */}
-                                    {data.category !== 'Accessories' && data.category !== 'Hat' && (
+                                    {data.category !== 'Accessories' && data.category !== 'Hat' && data.category !== 'Sandals' && (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="item-fabric-row3">Fabric (Optional)</Label>

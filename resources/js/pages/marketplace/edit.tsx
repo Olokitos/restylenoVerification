@@ -59,19 +59,24 @@ interface EditItemPageProps {
     categories: Category[];
 }
 
-const defaultCategories = [
+const defaultCategories = Array.from(new Set([
     'T-shirt',
     'Polo',
     'Pants',
     'Jeans',
     'Shorts',
+    'Skirts',
     'Dress',
     'Shoes',
+    'Sandals',
     'Boots',
+    'Sweaters',
+    'Long Sleeves',
+    'Hoodie',
     'Hat',
     'Jacket',
     'Accessories',
-];
+]));
 
 export default function EditItem({ product, categories }: EditItemPageProps) {
     const [images, setImages] = useState<File[]>([]);
@@ -230,7 +235,7 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
     const waistSizes = ['W24', 'W26', 'W28', 'W30', 'W32', 'W34', 'W36', 'W38', 'W40', 'W42'];
     const sizeOptions = useMemo(() => {
         const normalized = data.category?.toLowerCase();
-        if (normalized === 'shoes' || normalized === 'boots') {
+        if (normalized === 'shoes' || normalized === 'boots' || normalized === 'sandals') {
             return shoeSizes;
         }
         if (['pants', 'jeans', 'shorts'].includes(normalized || '')) {

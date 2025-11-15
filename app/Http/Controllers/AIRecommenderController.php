@@ -237,6 +237,7 @@ class AIRecommenderController extends Controller
                         'category' => $item->category,
                         'color' => $item->color,
                         'size' => $item->size,
+                        'fabric' => $item->fabric,
                         'description' => $item->description,
                     ];
                 })->toArray(),
@@ -627,26 +628,200 @@ class AIRecommenderController extends Controller
         $temp = $weatherData['main']['temp'];
         $condition = strtolower($weatherData['weather'][0]['main'] ?? '');
         
-        return $wardrobeItems->filter(function ($item) use ($temp, $condition) {
+        // Light colors for hot weather (from system)
+        $lightColors = ['white', 'sky blue', 'cream', 'ivory', 'yellow', 'pink', 'lavender', 'mint', 'coral', 'turquoise', 'beige', 'khaki', 'tan', 'silver'];
+        
+        // Dark colors for rainy weather (from system)
+        $darkColors = ['black', 'navy', 'blue', 'gray', 'charcoal', 'maroon', 'brown', 'teal', 'emerald', 'olive', 'purple', 'violet'];
+        
+        // Breathable fabrics for hot/dry season
+        $breathableFabrics = ['cotton', 'linen', 'bamboo', 'modal', 'rayon'];
+        
+        // Waterproof fabrics for wet season
+        $waterproofFabrics = ['waterproof', 'nylon', 'polyester'];
+        
+        // Heavy/warm fabrics to avoid in hot weather
+        $heavyFabrics = ['wool', 'fleece', 'cashmere', 'denim', 'leather'];
+        
+        // Warm fabrics preferred in cool weather
+        $warmFabrics = ['wool', 'fleece', 'cashmere'];
+        
+        return $wardrobeItems->filter(function ($item) use ($temp, $condition, $lightColors, $darkColors, $breathableFabrics, $waterproofFabrics, $heavyFabrics, $warmFabrics) {
             $category = strtolower($item->category);
+            $itemColor = strtolower($item->color ?? '');
+            $itemFabric = strtolower($item->fabric ?? '');
             
-            // Temperature-based filtering
-            if ($temp > 30) {
-                // Hot weather - prefer light clothing
-                return str_contains($category, 'shirt') || 
-                       str_contains($category, 'dress') || 
-                       str_contains($category, 'shorts') ||
-                       str_contains($category, 't-shirt');
-            } elseif ($temp < 15) {
-                // Cold weather - prefer warm clothing
-                return str_contains($category, 'shirt') || 
-                       str_contains($category, 'pants') || 
-                       str_contains($category, 'dress') ||
-                       str_contains($category, 'jacket') ||
-                       str_contains($category, 'coat');
+            // WET SEASON (Rainy) - Priority check
+            if (str_contains($condition, 'rain') || str_contains($condition, 'drizzle') || 
+                str_contains($condition, 'thunderstorm')) {
+                // Prefer: jackets, pants, boots, waterproof items
+                $hasRainAppropriateCategory = str_contains($category, 'jacket') || 
+                                             str_contains($category, 'pant') || 
+                                             str_contains($category, 'jean') ||
+                                             str_contains($category, 'boot') ||
+                                             str_contains($category, 'hoodie');
+                
+                // Prefer: dark colors from system
+                $hasRainAppropriateColor = false;
+                foreach ($darkColors as $darkColor) {
+                    if (str_contains($itemColor, $darkColor)) {
+                        $hasRainAppropriateColor = true;
+                        break;
+                    }
+                }
+                
+                // Prefer: waterproof fabrics
+                $hasWaterproofFabric = false;
+                foreach ($waterproofFabrics as $waterproofFabric) {
+                    if (str_contains($itemFabric, $waterproofFabric)) {
+                        $hasWaterproofFabric = true;
+                        break;
+                    }
+                }
+                
+                // Avoid: shorts, skirts, dresses, sandals, light colors
+                $isInappropriate = str_contains($category, 'short') || 
+                                 str_contains($category, 'skirt') || 
+                                 str_contains($category, 'dress') ||
+                                 str_contains($category, 'sandal');
+                
+                $hasLightColor = false;
+                foreach ($lightColors as $lightColor) {
+                    if (str_contains($itemColor, $lightColor)) {
+                        $hasLightColor = true;
+                        break;
+                    }
+                }
+                
+                // Avoid heavy fabrics that retain moisture (wool, fleece, cashmere)
+                $hasHeavyFabric = false;
+                foreach ($heavyFabrics as $heavyFabric) {
+                    if (str_contains($itemFabric, $heavyFabric)) {
+                        $hasHeavyFabric = true;
+                        break;
+                    }
+                }
+                
+                // Include if: appropriate category OR appropriate color OR waterproof fabric, AND not inappropriate, AND not light color, AND not heavy fabric
+                return ($hasRainAppropriateCategory || $hasRainAppropriateColor || $hasWaterproofFabric) && 
+                       !$isInappropriate && !$hasLightColor && !$hasHeavyFabric;
             }
             
-            // Moderate weather - all items suitable
+            // DRY SEASON (Hot) - >30°C
+            if ($temp > 30) {
+                // Prefer: light clothing
+                $hasHotAppropriateCategory = str_contains($category, 'shirt') || 
+                                            str_contains($category, 'dress') || 
+                                            str_contains($category, 'shorts') ||
+                                            str_contains($category, 't-shirt') ||
+                                            str_contains($category, 'polo');
+                
+                // Prefer: light colors from system
+                $hasHotAppropriateColor = false;
+                foreach ($lightColors as $lightColor) {
+                    if (str_contains($itemColor, $lightColor)) {
+                        $hasHotAppropriateColor = true;
+                        break;
+                    }
+                }
+                
+                // Prefer: breathable fabrics
+                $hasBreathableFabric = false;
+                foreach ($breathableFabrics as $breathableFabric) {
+                    if (str_contains($itemFabric, $breathableFabric)) {
+                        $hasBreathableFabric = true;
+                        break;
+                    }
+                }
+                
+                // Avoid: heavy outerwear and dark colors
+                $isInappropriate = str_contains($category, 'coat') || 
+                                  str_contains($category, 'jacket') ||
+                                  str_contains($category, 'sweater');
+                
+                $hasDarkColor = false;
+                foreach ($darkColors as $darkColor) {
+                    if (str_contains($itemColor, $darkColor)) {
+                        $hasDarkColor = true;
+                        break;
+                    }
+                }
+                
+                // Avoid: heavy/warm fabrics in hot weather
+                $hasHeavyFabric = false;
+                foreach ($heavyFabrics as $heavyFabric) {
+                    if (str_contains($itemFabric, $heavyFabric)) {
+                        $hasHeavyFabric = true;
+                        break;
+                    }
+                }
+                
+                // Include if: appropriate category OR appropriate color OR breathable fabric, AND not inappropriate, AND not dark color, AND not heavy fabric
+                return ($hasHotAppropriateCategory || $hasHotAppropriateColor || $hasBreathableFabric) && 
+                       !$isInappropriate && !$hasDarkColor && !$hasHeavyFabric;
+            }
+            
+            // WARM WEATHER (24-30°C) - Typical Philippine temperature
+            if ($temp >= 24 && $temp <= 30) {
+                // Prefer: light colors from system
+                $hasWarmAppropriateColor = false;
+                foreach ($lightColors as $lightColor) {
+                    if (str_contains($itemColor, $lightColor)) {
+                        $hasWarmAppropriateColor = true;
+                        break;
+                    }
+                }
+                
+                // Prefer: breathable fabrics
+                $hasBreathableFabric = false;
+                foreach ($breathableFabrics as $breathableFabric) {
+                    if (str_contains($itemFabric, $breathableFabric)) {
+                        $hasBreathableFabric = true;
+                        break;
+                    }
+                }
+                
+                // Avoid: heavy outerwear
+                $isInappropriate = str_contains($category, 'coat') || 
+                                  str_contains($category, 'heavy');
+                
+                // Avoid: heavy fabrics in warm weather
+                $hasHeavyFabric = false;
+                foreach ($heavyFabrics as $heavyFabric) {
+                    if (str_contains($itemFabric, $heavyFabric)) {
+                        $hasHeavyFabric = true;
+                        break;
+                    }
+                }
+                
+                return (!$isInappropriate || $hasWarmAppropriateColor || $hasBreathableFabric) && !$hasHeavyFabric;
+            }
+            
+            // MILD/COOL WEATHER (20-23°C)
+            if ($temp >= 20 && $temp < 24) {
+                return true; // All items suitable
+            }
+            
+            // COOL WEATHER (<20°C) - Very rare in Philippines
+            if ($temp < 20) {
+                $hasAppropriateCategory = str_contains($category, 'jacket') || 
+                                        str_contains($category, 'pant') || 
+                                        str_contains($category, 'jean') ||
+                                        str_contains($category, 'sweater') ||
+                                        str_contains($category, 'hoodie');
+                
+                // Prefer: warm fabrics in cool weather
+                $hasWarmFabric = false;
+                foreach ($warmFabrics as $warmFabric) {
+                    if (str_contains($itemFabric, $warmFabric)) {
+                        $hasWarmFabric = true;
+                        break;
+                    }
+                }
+                
+                return $hasAppropriateCategory || $hasWarmFabric;
+            }
+            
             return true;
         });
     }
@@ -701,23 +876,65 @@ class AIRecommenderController extends Controller
             // Build query text from context
             $temp = $weatherData['main']['temp'] ?? 20;
             $condition = $weatherData['weather'][0]['main'] ?? 'Clear';
+            $conditionLower = strtolower($condition);
             
             $userPreferences = $this->getUserPreferencesFromFeedback($userId);
             $preferredColors = implode(', ', $userPreferences['preferred_colors'] ?? []);
             $preferredCategories = implode(', ', $userPreferences['preferred_categories'] ?? []);
             
+            // Determine fabric preferences based on weather (Philippines two-season system)
+            $fabricPreference = '';
+            $isRainy = str_contains($conditionLower, 'rain') || str_contains($conditionLower, 'drizzle') || str_contains($conditionLower, 'thunderstorm');
+            
+            if ($temp > 30 || ($temp >= 24 && !$isRainy)) {
+                // Hot/Dry season - prefer breathable fabrics
+                $fabricPreference = 'Prefer breathable fabrics like cotton, linen, bamboo, modal, or rayon.';
+            } elseif ($isRainy) {
+                // Wet season - prefer waterproof fabrics
+                $fabricPreference = 'Prefer waterproof or water-resistant fabrics like nylon, polyester, or waterproof materials.';
+            } elseif ($temp < 20) {
+                // Cool weather - prefer warm fabrics
+                $fabricPreference = 'Prefer warm fabrics like wool, fleece, or cashmere.';
+            }
+            
+            // Build weather-specific clothing guidance (Philippines climate)
+            $weatherGuidance = '';
+            if ($isRainy) {
+                // Wet season / Rainy condition overrides temp
+                $weatherGuidance = 'It is rainy. Wear jackets, hoodies, windbreakers, long pants, waterproof shoes. Avoid shorts and sandals.';
+            } elseif ($temp >= 32) {
+                // Very hot (common from March–May)
+                $weatherGuidance = 'Very hot weather. Wear ultra-light clothing: sleeveless, shirts, shorts, skirts, sandals. Avoid jackets or sweaters.';
+            } elseif ($temp >= 27 && $temp < 32) {
+                // Warm (typical PH daytime)
+                $weatherGuidance = 'Warm weather. Wear light shirts, t-shirts, and breathable clothing. Shorts or light pants are recommended.';
+            } elseif ($temp >= 23 && $temp < 27) {
+                // Mild / Comfortable
+                $weatherGuidance = 'Mild weather. Wear versatile clothing: shirts, jeans, light jackets, dresses. Comfortable and not too hot.';
+            } elseif ($temp < 23) {
+                // Cool / Ber months or highlands
+                $weatherGuidance = 'Cool weather. Wear jackets, sweaters, hoodies, long sleeves, pants. Avoid very thin clothing.';
+            }
+            
             // Create a semantic query for what the user wants
             $queryText = "Outfit for {$occasion} occasion in {$temp}°C {$condition} weather.";
+            if ($weatherGuidance) {
+                $queryText .= " {$weatherGuidance}";
+            }
             if ($preferredColors) {
                 $queryText .= " Preferred colors: {$preferredColors}.";
             }
             if ($preferredCategories) {
                 $queryText .= " Preferred items: {$preferredCategories}.";
             }
+            if ($fabricPreference) {
+                $queryText .= " {$fabricPreference}";
+            }
             
-            // Create text descriptions for each wardrobe item
+            // Create text descriptions for each wardrobe item (include fabric)
             $itemTexts = $filteredItems->map(function ($item) {
-                return "{$item->category} {$item->name} by {$item->brand} in {$item->color}. {$item->description}";
+                $fabricText = $item->fabric ? " made of {$item->fabric}" : '';
+                return "{$item->category} {$item->name} by {$item->brand} in {$item->color}{$fabricText}. {$item->description}";
             })->toArray();
             
             // If no items, return null
@@ -769,6 +986,7 @@ class AIRecommenderController extends Controller
                         'category' => $scored['item']->category,
                         'color' => $scored['item']->color,
                         'size' => $scored['item']->size,
+                        'fabric' => $scored['item']->fabric,
                         'image_url' => $scored['item']->image_url,
                         'description' => $scored['item']->description,
                         'match_score' => round($scored['score'] * 100, 1), // Convert to percentage

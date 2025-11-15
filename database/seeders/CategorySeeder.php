@@ -14,19 +14,14 @@ class CategorySeeder extends Seeder
     {
         $categories = [
             [
-                'name' => 'Activewear',
-                'slug' => 'activewear',
-                'description' => 'Sportswear, gym clothes, and athletic apparel',
+                'name' => 'T-shirt',
+                'slug' => 't-shirt',
+                'description' => 'Casual t-shirts for everyday wear',
             ],
             [
-                'name' => 'Accessories',
-                'slug' => 'accessories',
-                'description' => 'Bags, jewelry, scarves, hats, and other accessories',
-            ],
-            [
-                'name' => 'Bottoms',
-                'slug' => 'bottoms',
-                'description' => 'Pants, jeans, skirts, and other lower body clothing',
+                'name' => 'Polo',
+                'slug' => 'polo',
+                'description' => 'Classic polo shirts for casual to smart-casual outfits',
             ],
             [
                 'name' => 'Pants',
@@ -34,44 +29,69 @@ class CategorySeeder extends Seeder
                 'description' => 'Standalone pants and trousers for every occasion',
             ],
             [
-                'name' => 'Hats',
-                'slug' => 'hats',
-                'description' => 'Caps, beanies, and headwear accessories',
+                'name' => 'Jeans',
+                'slug' => 'jeans',
+                'description' => 'Denim jeans in various styles and fits',
             ],
             [
-                'name' => 'Dresses',
-                'slug' => 'dresses',
+                'name' => 'Shorts',
+                'slug' => 'shorts',
+                'description' => 'Short pants for warm weather and casual wear',
+            ],
+            [
+                'name' => 'Skirts',
+                'slug' => 'skirts',
+                'description' => 'Skirts in various lengths and styles',
+            ],
+            [
+                'name' => 'Dress',
+                'slug' => 'dress',
                 'description' => 'One-piece garments including casual and formal dresses',
-            ],
-            [
-                'name' => 'Jackets',
-                'slug' => 'jackets',
-                'description' => 'Jackets, coats, blazers, and other outer garments',
             ],
             [
                 'name' => 'Shoes',
                 'slug' => 'shoes',
-                'description' => 'Footwear including sneakers, heels, boots, and sandals',
+                'description' => 'Footwear including sneakers, heels, and casual shoes',
             ],
             [
-                'name' => 'Tops',
-                'slug' => 'tops',
-                'description' => 'Shirts, blouses, t-shirts, and other upper body clothing',
+                'name' => 'Sandals',
+                'slug' => 'sandals',
+                'description' => 'Open-toed footwear perfect for warm weather',
             ],
             [
-                'name' => 'Polos',
-                'slug' => 'polos',
-                'description' => 'Classic polo shirts for casual to smart-casual outfits',
+                'name' => 'Boots',
+                'slug' => 'boots',
+                'description' => 'Footwear that covers the ankle and lower leg',
             ],
             [
-                'name' => 'Underwear',
-                'slug' => 'underwear',
-                'description' => 'Intimates, lingerie, and foundational garments',
+                'name' => 'Sweaters',
+                'slug' => 'sweaters',
+                'description' => 'Warm knitted garments for cooler weather',
             ],
             [
-                'name' => 'Vintage',
-                'slug' => 'vintage',
-                'description' => 'Vintage and retro clothing items',
+                'name' => 'Long Sleeves',
+                'slug' => 'long-sleeves',
+                'description' => 'Shirts and tops with long sleeves',
+            ],
+            [
+                'name' => 'Hoodie',
+                'slug' => 'hoodie',
+                'description' => 'Casual sweatshirt with a hood',
+            ],
+            [
+                'name' => 'Hat',
+                'slug' => 'hat',
+                'description' => 'Caps, beanies, and headwear accessories',
+            ],
+            [
+                'name' => 'Jacket',
+                'slug' => 'jacket',
+                'description' => 'Jackets, coats, blazers, and other outer garments',
+            ],
+            [
+                'name' => 'Accessories',
+                'slug' => 'accessories',
+                'description' => 'Bags, jewelry, scarves, and other accessories',
             ],
         ];
 
