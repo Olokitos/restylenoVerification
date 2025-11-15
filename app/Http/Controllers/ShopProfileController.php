@@ -72,29 +72,40 @@ class ShopProfileController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $request->validate([
+        $rules = [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'price' => 'required|numeric|min:0',
+            'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'condition' => 'required|in:new,like_new,good,fair,poor',
-            'size' => 'required|string|in:XS,S,M,L,XL,XXL,One Size',
             'brand' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:50',
             'category_id' => 'required|exists:categories,id',
             'status' => 'required|in:active,inactive,sold',
-        ]);
+        ];
 
-        $product->update($request->only([
-            'title',
-            'description',
-            'price',
-            'condition',
-            'size',
-            'brand',
-            'color',
-            'category_id',
-            'status',
-        ]));
+        // Size validation - check if category requires size
+        $category = \App\Models\Category::find($request->category_id);
+        $categoryName = $category ? strtolower($category->name) : '';
+        
+        if (!in_array($categoryName, ['accessories', 'hat', 'hats'])) {
+            $rules['size'] = 'required|string|max:20';
+        } else {
+            $rules['size'] = 'nullable|string|max:20';
+        }
+
+        $validated = $request->validate($rules);
+
+        $product->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'price' => (float) $validated['price'], // Ensure decimal precision
+            'condition' => $validated['condition'],
+            'size' => $validated['size'],
+            'brand' => $validated['brand'] ?? null,
+            'color' => $validated['color'] ?? null,
+            'category_id' => $validated['category_id'],
+            'status' => $validated['status'],
+        ]);
 
         return redirect()->route('shop-profile.index')
             ->with('success', 'Product updated successfully!');

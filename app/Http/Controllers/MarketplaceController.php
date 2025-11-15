@@ -271,7 +271,7 @@ class MarketplaceController extends Controller
         $rules = [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'price' => ['required', 'integer', 'min:1'],
+            'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'condition' => 'required|in:new,like_new,good,fair,poor',
             'brand' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:50',
@@ -312,7 +312,7 @@ class MarketplaceController extends Controller
             'category_id' => $category->id,
             'title' => $request->title,
             'description' => $request->description,
-            'price' => (int) $validated['price'],
+            'price' => (float) $validated['price'],
             'condition' => $request->condition,
             'size' => $request->size,
             'brand' => $request->brand,
@@ -364,7 +364,7 @@ class MarketplaceController extends Controller
         $rules = [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'price' => ['required', 'integer', 'min:1'],
+            'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'condition' => 'required|in:new,like_new,good,fair,poor',
             'brand' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:50',
@@ -406,7 +406,7 @@ class MarketplaceController extends Controller
         $updateData = [
             'title' => $request->title,
             'description' => $request->description,
-            'price' => (int) $validated['price'],
+            'price' => (float) $validated['price'],
             'condition' => $request->condition,
             'size' => $request->size,
             'brand' => $request->brand,

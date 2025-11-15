@@ -39,17 +39,70 @@ interface EditProductPageProps {
 }
 
 export default function EditProduct({ product, categories }: EditProductPageProps) {
+    // Format price to 2 decimal places when initializing
+    const formatPrice = (price: number | string | null | undefined): string => {
+        if (price === null || price === undefined || price === '') {
+            return '0.00';
+        }
+        const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+        if (isNaN(numPrice)) {
+            return '0.00';
+        }
+        return numPrice.toFixed(2);
+    };
+
     const { data, setData, patch, processing, errors } = useForm({
         title: product.title,
         description: product.description,
-        price: product.price.toString(),
+        price: formatPrice(product.price),
         condition: product.condition,
-        size: product.size,
+        size: product.size || '',
         brand: product.brand || '',
         color: product.color || '',
         category_id: product.category_id.toString(),
         status: product.status,
     });
+
+    const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = event.target.value;
+        if (raw === '') {
+            setData('price', '');
+            return;
+        }
+
+        // Allow digits and one decimal point
+        const cleaned = raw.replace(/[^\d.]/g, '');
+        // Ensure only one decimal point
+        const parts = cleaned.split('.');
+        const formatted = parts.length > 2 
+            ? parts[0] + '.' + parts.slice(1).join('')
+            : cleaned;
+
+        // Limit to 2 decimal places
+        if (formatted.includes('.')) {
+            const [integer, decimals] = formatted.split('.');
+            const limited = decimals.length > 2 ? integer + '.' + decimals.substring(0, 2) : formatted;
+            setData('price', limited);
+        } else {
+            setData('price', formatted);
+        }
+    };
+
+    const handlePriceBlur = () => {
+        if (!data.price) {
+            return;
+        }
+
+        const numeric = parseFloat(data.price);
+        if (Number.isNaN(numeric) || numeric < 0.01) {
+            setData('price', formatPrice(product.price)); // Reset to original if invalid
+            return;
+        }
+
+        // Format to 2 decimal places
+        const formatted = numeric.toFixed(2);
+        setData('price', formatted);
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,7 +116,38 @@ export default function EditProduct({ product, categories }: EditProductPageProp
         });
     };
 
-    const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
+    const apparelSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
+    const shoeSizes = ['US 5', 'US 6', 'US 7', 'US 8', 'US 9', 'US 10', 'US 11', 'US 12'];
+    const waistSizes = ['W24', 'W26', 'W28', 'W30', 'W32', 'W34', 'W36', 'W38', 'W40', 'W42'];
+    
+    // Get current category name
+    const currentCategory = categories.find(cat => cat.id.toString() === data.category_id);
+    const categoryName = currentCategory?.name?.toLowerCase() || '';
+    
+    const sizeOptions = React.useMemo(() => {
+        if (categoryName === 'shoes' || categoryName === 'boots') {
+            return shoeSizes;
+        }
+        if (['pants', 'jeans', 'shorts'].includes(categoryName)) {
+            return waistSizes;
+        }
+        if (categoryName === 'accessories' || categoryName === 'hat') {
+            return [];
+        }
+        return apparelSizes;
+    }, [categoryName]);
+
+    // Update size when category changes
+    React.useEffect(() => {
+        if (categoryName === 'accessories' || categoryName === 'hat') {
+            setData('size', '');
+            return;
+        }
+        if (data.size && !sizeOptions.includes(data.size)) {
+            setData('size', '');
+        }
+    }, [categoryName, data.size, sizeOptions, setData]);
+
     const conditions = [
         { value: 'new', label: 'New' },
         { value: 'like_new', label: 'Like New' },
@@ -143,9 +227,13 @@ export default function EditProduct({ product, categories }: EditProductPageProp
                                             id="price"
                                             type="number"
                                             value={data.price}
-                                            onChange={(e) => setData('price', e.target.value)}
-                                            placeholder="0"
+                                            onChange={handlePriceChange}
+                                            onBlur={handlePriceBlur}
+                                            placeholder="0.00"
                                             className="mt-1"
+                                            min={0.01}
+                                            step={0.01}
+                                            inputMode="decimal"
                                         />
                                         {errors.price && (
                                             <p className="text-sm text-red-600 mt-1">{errors.price}</p>
@@ -206,24 +294,32 @@ export default function EditProduct({ product, categories }: EditProductPageProp
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {/* Size */}
-                                        <div>
-                                            <Label>Size *</Label>
-                                            <RadioGroup value={data.size} onValueChange={(value) => setData('size', value)} className="mt-2">
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {sizes.map((size) => (
-                                                        <div key={size} className="flex items-center space-x-2">
-                                                            <RadioGroupItem value={size} id={`size-${size}`} />
-                                                            <Label htmlFor={`size-${size}`} className="text-sm">
-                                                                {size}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </RadioGroup>
-                                            {errors.size && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.size}</p>
-                                            )}
-                                        </div>
+                                        {categoryName !== 'accessories' && categoryName !== 'hat' ? (
+                                            <div>
+                                                <Label>
+                                                    {['pants', 'jeans', 'shorts'].includes(categoryName)
+                                                        ? 'Waist Size *'
+                                                        : ['shoes', 'boots'].includes(categoryName)
+                                                        ? 'Shoe Size *'
+                                                        : 'Size *'}
+                                                </Label>
+                                                <RadioGroup value={data.size} onValueChange={(value) => setData('size', value)} className="mt-2">
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        {sizeOptions.map((size) => (
+                                                            <div key={size} className="flex items-center space-x-2">
+                                                                <RadioGroupItem value={size} id={`size-${size}`} />
+                                                                <Label htmlFor={`size-${size}`} className="text-sm">
+                                                                    {size}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </RadioGroup>
+                                                {errors.size && (
+                                                    <p className="text-sm text-red-600 mt-1">{errors.size}</p>
+                                                )}
+                                            </div>
+                                        ) : null}
 
                                         {/* Color */}
                                         <div>
@@ -303,7 +399,7 @@ export default function EditProduct({ product, categories }: EditProductPageProp
                             <Button 
                                 type="submit" 
                                 disabled={processing}
-                                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white"
+                                className="bg-green-600 hover:bg-green-700 text-white"
                             >
                                 <Save className="w-4 h-4 mr-2" />
                                 {processing ? 'Updating...' : 'Update Product'}

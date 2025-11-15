@@ -78,12 +78,29 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
     const [previewUrls, setPreviewUrls] = useState<string[]>(product.images.map(img => `/storage/${img}`));
     const [existingImages, setExistingImages] = useState<string[]>(product.images);
 
-    const effectiveCategories: string[] = Array.from(
-        new Set([
-            ...(categories && categories.length > 0 ? categories.map((cat: any) => cat.name) : []),
-            ...defaultCategories,
-        ]),
-    ).sort((a, b) => a.localeCompare(b));
+    // Use case-insensitive deduplication to prevent duplicate categories
+    const categoryMap = new Map<string, string>();
+
+    // First, add database categories (these are the source of truth)
+    if (categories && categories.length > 0) {
+        categories.forEach((cat: any) => {
+            const normalized = cat.name.toLowerCase();
+            if (!categoryMap.has(normalized)) {
+                categoryMap.set(normalized, cat.name); // Store original case
+            }
+        });
+    }
+
+    // Then add default categories only if they don't already exist
+    defaultCategories.forEach((cat: string) => {
+        const normalized = cat.toLowerCase();
+        if (!categoryMap.has(normalized)) {
+            categoryMap.set(normalized, cat);
+        }
+    });
+
+    const effectiveCategories: string[] = Array.from(categoryMap.values())
+        .sort((a, b) => a.localeCompare(b));
 
     const { data, setData, put, processing, errors } = useForm({
         title: product.title,
@@ -105,12 +122,22 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
             return;
         }
 
-        const numeric = parseInt(raw.replace(/[^\d]/g, ''), 10);
-        if (Number.isNaN(numeric)) {
-            return;
-        }
+        // Allow digits and one decimal point
+        const cleaned = raw.replace(/[^\d.]/g, '');
+        // Ensure only one decimal point
+        const parts = cleaned.split('.');
+        const formatted = parts.length > 2 
+            ? parts[0] + '.' + parts.slice(1).join('')
+            : cleaned;
 
-        setData('price', numeric.toString());
+        // Limit to 2 decimal places
+        if (formatted.includes('.')) {
+            const [integer, decimals] = formatted.split('.');
+            const limited = decimals.length > 2 ? integer + '.' + decimals.substring(0, 2) : formatted;
+            setData('price', limited);
+        } else {
+            setData('price', formatted);
+        }
     };
 
     const handlePriceBlur = () => {
@@ -118,13 +145,15 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
             return;
         }
 
-        const numeric = parseInt(data.price, 10);
-        if (Number.isNaN(numeric) || numeric <= 0) {
+        const numeric = parseFloat(data.price);
+        if (Number.isNaN(numeric) || numeric < 0.01) {
             setData('price', '');
             return;
         }
 
-        setData('price', numeric.toString());
+        // Format to 2 decimal places
+        const formatted = numeric.toFixed(2);
+        setData('price', formatted);
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -389,11 +418,11 @@ export default function EditItem({ product, categories }: EditItemPageProps) {
                                                 value={data.price}
                                                 onChange={handlePriceChange}
                                                 onBlur={handlePriceBlur}
-                                                placeholder="0"
+                                                placeholder="0.00"
                                                 className="mt-1"
-                                                min={1}
-                                                step={1}
-                                                inputMode="numeric"
+                                                min={0.01}
+                                                step={0.01}
+                                                inputMode="decimal"
                                             />
                                             {errors.price && (
                                                 <p className="text-sm text-red-600 mt-1">{errors.price}</p>
