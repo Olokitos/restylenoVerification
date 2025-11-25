@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Purchase History Report</title>
+    <title>Sales History Report</title>
     <style>
         @font-face {
             font-family: 'DejaVu Sans';
@@ -130,7 +130,7 @@
         }
         .summary {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 12px;
             margin-bottom: 25px;
         }
@@ -152,6 +152,12 @@
             font-size: 16px;
             font-weight: 700;
             color: #1a202c;
+        }
+        .summary-value.earnings {
+            color: #15803d;
+        }
+        .summary-value.commission {
+            color: #dc2626;
         }
         .filters {
             background: #f8fafc;
@@ -281,7 +287,7 @@
                 @endif
                 <div class="brand-text">
                     <div class="brand-name">RESTYLE</div>
-                    <div class="title">Purchase History Report</div>
+                    <div class="title">Sales History Report</div>
                     <div class="tagline">WASTE LESS · WEAR MORE</div>
                     <div class="subtitle">Sustainable Fashion Marketplace</div>
                 </div>
@@ -303,24 +309,28 @@
     <!-- Summary -->
     <div class="summary">
         <div class="summary-card">
-            <div class="summary-label">Total Transactions</div>
+            <div class="summary-label">Total Sales</div>
             <div class="summary-value">{{ $summary['total_transactions'] }}</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">Total Spent</div>
-            <div class="summary-value">₱{{ number_format($summary['total_spent'], 2) }}</div>
+            <div class="summary-label">Total Revenue</div>
+            <div class="summary-value">₱{{ number_format($summary['total_sales'], 2) }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Total Earnings</div>
+            <div class="summary-value earnings">₱{{ number_format($summary['total_earnings'], 2) }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Total Commissions</div>
+            <div class="summary-value commission">₱{{ number_format($summary['total_commissions'], 2) }}</div>
         </div>
         <div class="summary-card">
             <div class="summary-label">Completed</div>
             <div class="summary-value">{{ $summary['completed_transactions'] }}</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">Pending</div>
-            <div class="summary-value">{{ $summary['pending_transactions'] }}</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-label">Avg Order Value</div>
-            <div class="summary-value">₱{{ number_format($summary['average_order_value'], 2) }}</div>
+            <div class="summary-label">Avg Sale Value</div>
+            <div class="summary-value">₱{{ number_format($summary['average_sale_value'], 2) }}</div>
         </div>
     </div>
 
@@ -345,49 +355,34 @@
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Date</th>
-                    <th>Transaction ID</th>
-                    <th>Product</th>
-                    <th>Seller</th>
+                    <th>Seller Name</th>
+                    <th>Buyer Name</th>
                     <th class="text-right">Price</th>
-                    <th>Status</th>
-                    <th>Completed Date</th>
+                    <th>Date</th>
+                    <th class="text-right">Earnings</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($transactions as $index => $transaction)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $transaction->created_at->format('M d, Y') }}</td>
-                        <td>#{{ $transaction->id }}</td>
-                        <td>{{ $transaction->product->title ?? 'Unknown' }}</td>
-                        <td>{{ $transaction->seller->name ?? 'N/A' }}</td>
+                        <td>{{ $user->name }}</td>
+                        <td>{{ $transaction->buyer->name ?? 'N/A' }}</td>
                         <td class="text-right text-bold">₱{{ number_format($transaction->sale_price, 2) }}</td>
-                        <td>
-                            <span class="status status-{{ $transaction->status }}">
-                                {{ str_replace('_', ' ', $transaction->status) }}
-                            </span>
-                        </td>
-                        <td>
-                            @if($transaction->completed_at)
-                                {{ $transaction->completed_at->format('M d, Y') }}
-                            @else
-                                -
-                            @endif
-                        </td>
+                        <td>{{ $transaction->created_at->format('M d, Y') }}</td>
+                        <td class="text-right text-bold" style="color: #15803d;">₱{{ number_format($transaction->seller_earnings, 2) }}</td>
                     </tr>
                 @endforeach
                 <tr class="total-row">
-                    <td colspan="5" class="text-right"><strong>Total:</strong></td>
-                    <td class="text-right"><strong>₱{{ number_format($summary['total_spent'], 2) }}</strong></td>
-                    <td colspan="2"></td>
+                    <td colspan="2" class="text-right"><strong>Totals:</strong></td>
+                    <td class="text-right"><strong>₱{{ number_format($summary['total_sales'], 2) }}</strong></td>
+                    <td></td>
+                    <td class="text-right"><strong>₱{{ number_format($summary['total_earnings'], 2) }}</strong></td>
                 </tr>
             </tbody>
         </table>
     @else
         <div class="empty-state">
-            No purchase history found for the selected filters.
+            No sales history found for the selected filters.
         </div>
     @endif
 
@@ -397,3 +392,4 @@
     </div>
 </body>
 </html>
+

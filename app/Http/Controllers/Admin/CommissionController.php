@@ -155,11 +155,20 @@ class CommissionController extends Controller
             'status' => $request->status,
         ];
 
+        // Convert logo to base64 for PDF embedding
+        $logoPath = public_path('logo.svg');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoContent = file_get_contents($logoPath);
+            $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoContent);
+        }
+
         $pdf = Pdf::loadView('admin.commissions.report-pdf', [
             'generatedAt' => now(),
             'commissions' => $commissions,
             'summary' => $summary,
             'filters' => $filters,
+            'logoBase64' => $logoBase64,
         ])->setPaper('a4', 'landscape')->setOptions([
             'defaultFont' => 'DejaVu Sans',
             'isHtml5ParserEnabled' => true,

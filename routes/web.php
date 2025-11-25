@@ -189,6 +189,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('transactions/{transaction}/confirm-delivery', [App\Http\Controllers\TransactionController::class, 'confirmDelivery'])->name('transactions.confirm-delivery');
     Route::get('transactions/buyer', [App\Http\Controllers\TransactionController::class, 'buyerTransactions'])->name('transactions.buyer');
     Route::get('transactions/buyer/export', [App\Http\Controllers\TransactionController::class, 'exportPurchaseHistory'])->name('transactions.buyer.export');
+    Route::get('transactions/seller/export', [App\Http\Controllers\TransactionController::class, 'exportSalesHistory'])->name('transactions.seller.export');
     Route::get('sellers/{seller}/profile', [App\Http\Controllers\TransactionController::class, 'showSellerProfile'])->name('sellers.profile');
     
     // Seller routes

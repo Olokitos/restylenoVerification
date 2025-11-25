@@ -37,6 +37,31 @@
             align-items: center;
             gap: 16px;
         }
+        .logo-container {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+        }
+        .logo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .logo-text {
+            font-size: 32px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
         .brand-text {
             display: flex;
             flex-direction: column;
@@ -176,6 +201,15 @@
     <div class="header">
         <div>
             <div class="brand">
+                @if(isset($logoBase64) && $logoBase64)
+                <div class="logo-container">
+                    <img src="{{ $logoBase64 }}" alt="Restyle Logo" class="logo" />
+                </div>
+                @else
+                <div class="logo-container">
+                    <div class="logo-text">R</div>
+                </div>
+                @endif
                 <div class="brand-text">
                     <div class="brand-name">RESTYLE</div>
                     <div class="brand-tagline">Waste less - Wear more</div>

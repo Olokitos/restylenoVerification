@@ -694,4 +694,72 @@ class TransactionController extends Controller
         
         return $pdf->download($filename);
     }
+
+    /**
+     * Export seller's sales history as PDF
+     */
+    public function exportSalesHistory(Request $request)
+    {
+        $query = Transaction::with(['product', 'buyer'])
+            ->where('seller_id', auth()->id());
+        
+        // Date range filter
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+        
+        // Status filter
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        
+        $transactions = $query->orderBy('created_at', 'desc')->get();
+        
+        // Calculate summary statistics
+        $summary = [
+            'total_transactions' => $transactions->count(),
+            'total_sales' => $transactions->sum('sale_price'),
+            'total_earnings' => $transactions->sum('seller_earnings'),
+            'total_commissions' => $transactions->sum('commission_amount'),
+            'completed_transactions' => $transactions->where('status', 'completed')->count(),
+            'pending_transactions' => $transactions->whereIn('status', ['pending_payment', 'payment_submitted', 'payment_verified', 'shipped', 'delivered'])->count(),
+            'average_sale_value' => $transactions->count() > 0 ? $transactions->avg('sale_price') : 0,
+        ];
+        
+        $filters = [
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'status' => $request->status,
+        ];
+        
+        $user = auth()->user();
+        
+        // Convert logo to base64 for PDF embedding
+        $logoPath = public_path('logo.svg');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoContent = file_get_contents($logoPath);
+            $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoContent);
+        }
+        
+        $pdf = Pdf::loadView('transactions.sales-history-pdf', [
+            'generatedAt' => now(),
+            'transactions' => $transactions,
+            'summary' => $summary,
+            'filters' => $filters,
+            'user' => $user,
+            'logoBase64' => $logoBase64,
+        ])->setPaper('a4', 'landscape')->setOptions([
+            'defaultFont' => 'DejaVu Sans',
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+        ]);
+        
+        $filename = 'sales_history_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        
+        return $pdf->download($filename);
+    }
 }
