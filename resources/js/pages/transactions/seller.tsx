@@ -181,11 +181,6 @@ export default function SellerTransactions({ transactions, stats }: SellerTransa
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <img 
-                  src="/logo.svg" 
-                  alt="Restyle Logo" 
-                  className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
-                />
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
                     <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-lg font-bold text-green-600 dark:bg-green-900">₱</span>

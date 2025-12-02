@@ -37,8 +37,8 @@
             gap: 20px;
         }
         .logo-container {
-            width: 70px;
-            height: 70px;
+            width: 400px;
+            height: 400px;
             display: flex;
             align-items: center;
             justify-content: center;
