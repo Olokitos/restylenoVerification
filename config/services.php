@@ -51,6 +51,7 @@ return [
         'api_token' => env('HUGGING_FACE_API_TOKEN'), // Primary token for new integration
         'model_name' => env('HUGGINGFACE_MODEL_NAME'),
         'model_url' => env('HUGGINGFACE_MODEL_URL'), // Optional: full URL overrides model_name
+        'space_url' => env('HUGGING_FACE_SPACE_URL', 'https://kennnyy-recomendation.hf.space'), // Hugging Face Space URL
     ],
 
 ];

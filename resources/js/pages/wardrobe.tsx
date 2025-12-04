@@ -1389,7 +1389,13 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             
                             setAiSuggestion(recommendations);
                             setMlConfidence(recommendations.confidence || 0.85);
-                            setSuccessMessage('🤖 AI-powered outfit suggestions generated using Hugging Face! ✨');
+                            
+                            // Show different message for fallback vs AI recommendations
+                            if (data.source === 'local_fallback') {
+                                setSuccessMessage('✨ Outfit suggestions based on your preferences and weather! 🌤️');
+                            } else {
+                                setSuccessMessage('🤖 AI-powered outfit suggestions generated using Hugging Face! ✨');
+                            }
                             setTimeout(() => setSuccessMessage(null), 4000);
                             
                             // Cache the result
@@ -1429,19 +1435,30 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                             await new Promise(resolve => setTimeout(resolve, 2000));
                             continue; // Retry
                         } else if (errorData.message) {
-                            // Real error - don't retry
-                            setAiSuggestion({
-                                message: errorData.message,
-                                items: [],
-                                reason: errorData.requires_combination 
-                                    ? "Items cannot form valid outfit combination"
-                                    : errorData.item_count === 1 
-                                    ? "Insufficient items for recommendations" 
-                                    : "Filtered items insufficient"
+                            // Real error - use local fallback instead of showing error
+                            console.warn('API returned error, using local fallback:', errorData.message);
+                            
+                            // Use local fallback algorithm
+                            const fallback = buildPreferenceBasedSuggestion({
+                                wardrobeItems,
+                                preferences: userPreferences,
+                                weather: currentWeather,
+                                maxRecommendations,
                             });
+                            
+                            setAiSuggestion(fallback.suggestion);
+                            setMlConfidence(fallback.confidence);
+                            setSuccessMessage('✨ Outfit suggestions based on your preferences and weather! 🌤️');
+                            setTimeout(() => setSuccessMessage(null), 4000);
+                            
+                            // Cache the fallback result
+                            localStorage.setItem(cacheKey, JSON.stringify({
+                                suggestion: fallback.suggestion,
+                                mlConfidence: fallback.confidence
+                            }));
+                            localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+                            
                             setSuggestionLoading(false);
-                            setSuccessMessage(errorData.message);
-                            setTimeout(() => setSuccessMessage(null), 6000);
                             return;
                         }
                     }
@@ -2711,7 +2728,7 @@ export default function Wardrobe({ wardrobeItems }: WardrobeProps) {
                                                             const categoryOrder = ['tops', 'bottoms', 'dresses', 'outerwear', 'footwear', 'accessories', 'others'];
                                                             
                                                             // Group items by category
-                                                            const groupedItems = aiSuggestion.items.reduce<Record<string, WardrobeItem[]>>((acc: Record<string, WardrobeItem[]>, item: WardrobeItem) => {
+                                                            const groupedItems = aiSuggestion.items.reduce((acc: Record<string, WardrobeItem[]>, item: WardrobeItem) => {
                                                                 const category = classifyCategory(item.category || '');
                                                                 if (!acc[category]) {
                                                                     acc[category] = [];
