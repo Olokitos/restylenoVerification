@@ -293,7 +293,7 @@
                 </div>
             </div>
             <div class="meta">
-                <div class="meta-item"><strong>Generated:</strong> {{ $generatedAt->format('M d, Y g:i A') }}</div>
+                <div class="meta-item"><strong>Generated:</strong> {{ $generatedAt->format('M d, Y g:i A T') }}</div>
                 <div class="meta-item"><strong>Report ID:</strong> {{ strtoupper($generatedAt->format('ymdHis')) }}</div>
             </div>
         </div>

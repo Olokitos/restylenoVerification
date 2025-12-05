@@ -163,8 +163,9 @@ class CommissionController extends Controller
             $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoContent);
         }
 
+        $generatedAt = Carbon::now(config('app.timezone'));
         $pdf = Pdf::loadView('admin.commissions.report-pdf', [
-            'generatedAt' => now(),
+            'generatedAt' => $generatedAt,
             'commissions' => $commissions,
             'summary' => $summary,
             'filters' => $filters,
@@ -175,7 +176,7 @@ class CommissionController extends Controller
             'isRemoteEnabled' => true,
         ]);
 
-        $filename = 'commission_report_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        $filename = 'commission_report_' . $generatedAt->format('Y-m-d_H-i-s') . '.pdf';
 
         return $pdf->download($filename);
     }

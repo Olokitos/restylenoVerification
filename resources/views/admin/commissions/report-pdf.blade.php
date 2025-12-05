@@ -220,7 +220,7 @@
         </div>
         <div class="meta">
             <div class="meta-label">Generated:</div>
-            <div>{{ $generatedAt->format('M d, Y g:i A') }}</div>
+            <div>{{ $generatedAt->format('M d, Y g:i A T') }}</div>
             <div class="meta-label" style="margin-top: 8px;">Report ID:</div>
             <div>{{ strtoupper($generatedAt->format('ymdHis')) }}</div>
         </div>

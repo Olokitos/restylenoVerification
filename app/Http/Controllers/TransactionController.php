@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
@@ -677,8 +678,9 @@ class TransactionController extends Controller
             $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoContent);
         }
         
+        $generatedAt = Carbon::now(config('app.timezone'));
         $pdf = Pdf::loadView('transactions.purchase-history-pdf', [
-            'generatedAt' => now(),
+            'generatedAt' => $generatedAt,
             'transactions' => $transactions,
             'summary' => $summary,
             'filters' => $filters,
@@ -690,7 +692,7 @@ class TransactionController extends Controller
             'isRemoteEnabled' => true,
         ]);
         
-        $filename = 'purchase_history_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        $filename = 'purchase_history_' . $generatedAt->format('Y-m-d_H-i-s') . '.pdf';
         
         return $pdf->download($filename);
     }
@@ -745,8 +747,9 @@ class TransactionController extends Controller
             $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoContent);
         }
         
+        $generatedAt = Carbon::now(config('app.timezone'));
         $pdf = Pdf::loadView('transactions.sales-history-pdf', [
-            'generatedAt' => now(),
+            'generatedAt' => $generatedAt,
             'transactions' => $transactions,
             'summary' => $summary,
             'filters' => $filters,
@@ -758,7 +761,7 @@ class TransactionController extends Controller
             'isRemoteEnabled' => true,
         ]);
         
-        $filename = 'sales_history_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        $filename = 'sales_history_' . $generatedAt->format('Y-m-d_H-i-s') . '.pdf';
         
         return $pdf->download($filename);
     }
