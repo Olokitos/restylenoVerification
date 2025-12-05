@@ -38,8 +38,8 @@
             gap: 16px;
         }
         .logo-container {
-            width: 400px;
-            height: 400px;
+            width: 250px;
+            height: 250px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -56,7 +56,7 @@
             display: block;
         }
         .logo-text {
-            font-size: 32px;
+            font-size: 72px;
             font-weight: 800;
             color: #ffffff;
             letter-spacing: 1px;
